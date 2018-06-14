@@ -1,0 +1,2 @@
+from smt_z3 import FractionalHypertreeDecomposition_z3
+#from smt_pysmt import FractionalHypertreeDecomposition_pysmt

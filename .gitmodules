@@ -1,0 +1,3 @@
+[submodule "lib/htd_validate"]
+	path = lib/htd_validate
+	url = git@github.com:daajoe/htd_validate.git

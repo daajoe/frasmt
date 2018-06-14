@@ -1,0 +1,195 @@
+#!/usr/bin/env python2
+#
+# Copyright 2018
+#
+# fhtd is free software: you can redistribute it
+# and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+# fhtd is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.  You should have received a
+# copy of the GNU General Public License along with
+# fhtd.  If not, see <http://www.gnu.org/licenses/>.
+#
+from __future__ import absolute_import
+
+import argparse
+import ctypes
+import inspect
+import json
+import logging
+import logging.config
+import os
+import signal
+import sys
+import time
+from cStringIO import StringIO
+from decimal import Decimal
+
+import git
+
+__license__ = 'GPL'
+__version__ = '0.0.1-dev'
+
+# TODO: fixme
+src_path = os.path.abspath(os.path.realpath(inspect.getfile(inspect.currentframe())))
+sys.path.insert(0, os.path.realpath(os.path.join(src_path, '../..')))
+
+src_path = os.path.realpath(os.path.join(src_path, '../../lib'))
+
+libs = ['htd_validate']
+
+if src_path not in sys.path:
+    for lib in libs:
+        sys.path.insert(0, os.path.join(src_path, lib))
+
+from htd_validate import Hypergraph
+from fhtd import FractionalHypertreeDecomposer, utils
+from fhtd.utils import sha256_checksum
+
+
+def setup_logging(config_file='%s/logging.conf' % (os.path.dirname(__file__))):
+    logging.config.fileConfig(config_file)
+
+
+setup_logging(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logging.conf'))
+
+# SETUP SIGNAL HANDLING
+signal.signal(signal.SIGTERM, utils.signals.handler)
+signal.signal(signal.SIGINT, utils.signals.handler)
+
+
+def is_valid_file(parser, arg):
+    if not arg:
+        parser.error('Missing file.')
+    if not os.path.exists(arg):
+        parser.error('The file "%s" does not exist!' % arg)
+
+
+# available_local_solvers = [trellis.decomposer.Tamaki2016, trellis.decomposer.Tamaki2017, trellis.decomposer.Jdrasil2016,
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='%(prog)s -f instance')
+    # parser.formatter_class._max_help_position = 120
+    parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__))
+
+    root_group = parser.add_mutually_exclusive_group()
+    root_group.add_argument('--pcs', dest='pcs', action='store_true',
+                            help='output pcs file (see: https://automl.github.io/SMAC3/stable/manual.html)')
+    root_group.add_argument('-f', '--file', dest='instance', action='store', type=lambda x: os.path.realpath(x),
+                            help='instance')
+    parser.add_argument('-t', '--tmp-file', dest='tmp', action='store', type=lambda x: os.path.realpath(x),
+                        help='ignored')
+    parser.add_argument('-ck', '--clique_k', dest='clique_k', action='store', type=lambda x: int(x), default=4,
+                        help='Threshold for relaxed clique computation (ideal clique = 3). [default=4],'
+                             '1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
+    parser.add_argument('-ncb', '--disable_clique_breaking', dest='encode_cliques', action='store_false', default=True,
+                        help='Do not encode into the SMT encodinge a fixed ordering for some clique.')
+    parser.add_argument('-ntb', '--disable_twin_breaking', dest='encode_twins', action='store_false', default=True,
+                        help='Do not encode into the SMT encodinge a fixed ordering for twin vertices.')
+    parser.add_argument('-np', '--disable-prepocessing', dest='no_preprocessing', action='store_true', default=False,
+                        help='Disable preprocessing.')
+    parser.add_argument('-nsmt', '--disable_solving', dest='preprocessing_only', action='store_true', default=False,
+                        help='Disable solving and exit right after preprocessing (just for technical purposes, e.g., '
+                             'recording statistics for preprocessing).')
+    parser.add_argument('-bo', '--bounds_only', dest='only_fhtd', action='store_true', default=False,
+                        help='Output only the result. Do not compute an actual decomposition.')
+    parser.add_argument('-ub', '--upper_bound', dest='upper_bound', default=None, type=lambda x: int(x),
+                        help='Explicitly set an upper bound. default = None')
+    parser.add_argument('-ghtd', '--compute_generalized_hypertree_decomposition', dest='ghtd',
+                        action='store_true', default=False,
+                        help='Compute the generalized hypertree decomposition (width) instead of the fractional.')
+    root_group.add_argument('-e', '--epsilon', dest='epsilon', action='store', type=lambda x: Decimal(x),
+                            help='Due missing arbitary precision within solvers we might run into rounding issues. '
+                                 'Therefore, we allow here to specify an additive precision offset (for the checker). '
+                                 'Default value = 0.001', default=Decimal(0.001))
+
+    parser.add_argument('--runid', dest='run', action='store', type=int,
+                        help='ignored')
+    args = parser.parse_args()
+    is_valid_file(parser, args.instance)
+    if args.pcs:
+        raise NotImplementedError
+
+    return args
+
+
+def main():
+    repo = git.Repo(search_parent_directories=True)
+    solver_sha = repo.head.object.hexsha
+    version = repo.git.rev_parse(solver_sha, short=7)
+
+    args = parse_args()
+    fname = args.instance
+    epsilon = args.epsilon
+    encode_cliques = args.encode_cliques
+    encode_twins = args.encode_twins
+    clique_k = args.clique_k
+    no_pre = args.no_preprocessing
+    hypergraph = Hypergraph.from_file(fname, fischl_format=True)
+    only_fhtd = args.only_fhtd
+    upper_bound = args.upper_bound
+    ghtd = args.ghtd
+    preprocessing_only = args.preprocessing_only
+
+    # pgraph_view = HypergraphPrimalView(hypergraph=hypergraph)
+    # td_stream = StringIO()
+    # td = TreeDecomposition(pgraph_view, timeout=20, stream=td_stream)
+    # res = td.solve()
+    # print "Objective", res['objective']
+    output = {'version': version, 'instance_path': fname, 'instance': os.path.basename(fname),
+              'solved': 0, 'hash': sha256_checksum(fname), 'epsilon': str(epsilon), 'wall': None,
+              '#hyperedges': hypergraph.number_of_edges(), '#vertices': hypergraph.number_of_nodes(),
+              'size_largest_hyperedge': hypergraph.size_largest_hyperedge(), 'ghtd': int(ghtd),
+              'parameters': {'ck': clique_k, 'ncb': int(not(encode_cliques)), 'ntb': int(not(encode_twins)),
+                             'np': int(no_pre), 'nsmt': int(preprocessing_only), 'bo': int(only_fhtd)}}
+
+    wall_start = time.time()
+    stream = StringIO()
+
+    # stream = open("output.txt", "w+")
+    # x.write(self.stream.getvalue())
+
+    decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon)
+
+    try:
+        res = decomposer.solve(only_fhtw=only_fhtd, encode_cliques=encode_cliques,
+                               encode_twins=encode_twins, clique_k=clique_k,
+                               run_preprocessing=not no_pre, upper_bound=upper_bound, ghtd=ghtd,
+                               preprocessing_only=preprocessing_only)
+        # set to True for fhtw only
+        wall = time.time() - wall_start
+        output.update({'width': res['objective'], 'subsolvers': res['subsolvers'], 'solved': 1,
+                       'solver_wall': wall, 'pre_wall': res['pre_wall'], 'enc_wall': res['enc_wall'],
+                       'wall': wall, 'pre_clique_size': res['pre_clique_size'],
+                       'pre_clique_k': res['pre_clique_k'], 'num_twins': res['pre_num_twins'],
+                       'pre_size_max_twin': res['pre_size_max_twin']})
+        logging.warn("Runtime was %s." % wall)
+        # TDs are sometimes not json serializable to we really want to remove them
+        z3_wall = 0
+        enc_wall = 0
+        for s in output['subsolvers']:
+            del output['subsolvers'][s]['decomposition']
+            output['subsolver'] = 'z3'
+            z3_wall += output['subsolvers'][s]['z3_wall']
+            enc_wall += output['subsolvers'][s]['enc_wall']
+        output['z3_wall'] = z3_wall
+        output['enc_wall'] = enc_wall
+        if 'subsolvers' not in output or output['subsolvers'] == {}:
+            output['subsolver'] = 'pre'
+
+    except utils.signals.InterruptException:
+        logging.error("Interrupted by signal.")
+    except ctypes.ArgumentError:
+        logging.error("Interrupted by signal.")
+
+    sys.stdout.write(json.dumps(output, sort_keys=True))
+    sys.stdout.write('\n')
+    sys.stdout.flush()
+    exit(0)
+
+
+if __name__ == "__main__":
+    main()

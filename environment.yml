@@ -1,0 +1,24 @@
+name: fhtd
+channels:
+  - yikelu
+  - ibmdecisionoptimization
+  - anaconda
+  - potassco
+  - conda-forge
+  - defaults
+  - daajoe
+dependencies:
+  - lxml>=4.1.1
+  - deprecation>=2.0
+  - backports>=1.0
+  - backports.functools_lru_cache>=1.5
+  - backports.lzma>=0.0.8
+  - backports_abc>=0.5
+  - gitpython>=2.1.3
+  - matplotlib>=2.1.2
+  - networkx>=2.0
+  - numpy>=1.14.1
+  - cplex>=12.8
+  - pymonad>=1.3
+  - clingo
+  - z3_experimental
