@@ -1,4 +1,4 @@
-# fractionalhypertreewidth
+# FraSMT (SMT-based decomposer for fractional hypertree decompositions)
 
 ## Download:
 ```bash
