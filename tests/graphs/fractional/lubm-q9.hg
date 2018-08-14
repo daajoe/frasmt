@@ -1,0 +1,6 @@
+advisor(X14,X15),
+teacherOf(X11,X15),
+Course(X11),
+Faculty(X15),
+Student(X14),
+takesCourse(X11,X14).

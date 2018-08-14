@@ -31,7 +31,7 @@ from fhtd.smt import FractionalHypertreeDecomposition_z3
 
 class FractionalHypertreeDecomposer:
     # suggested order [1], ..., [k]
-    def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None):
+    def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False):
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
 
@@ -39,14 +39,17 @@ class FractionalHypertreeDecomposer:
         self._pp = Preprocessor(HypergraphPrimalView(hypergraph), replay=replay, lb=lb)
         self.timeout = timeout
         self.stream = stream
+        self.ghtd = ghtd
 
     ######[ENCODING]######
     # fix ordering; compute independently for each biconnected component
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
-              encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, ghtd=False,
-              preprocessing_only=False):
+              encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False):
         pre_wall = time.time()
+        if self.ghtd:
+            run_preprocessing=False
+            logging.warning("Option ghtd disables preprocessing for now!")
 
         # only fhtw implies connect components
         if only_fhtw:
@@ -134,9 +137,10 @@ class FractionalHypertreeDecomposer:
 
                     z3_wall = time.time()
                     decomposer = FractionalHypertreeDecomposition_z3(self._pp.hgp.hg, timeout=self.timeout,
-                                                                     checker_epsilon=self.__checker_epsilon)
+                                                                     checker_epsilon=self.__checker_epsilon,
+                                                                     ghtd=self.ghtd)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
-                                           clique=clique, twins=twin_vertices, ubound=upper_bound, ghtd=ghtd)
+                                           clique=clique, twins=twin_vertices, ubound=upper_bound)
                     ret['subsolvers'][solver_run_id] = {'width': res['objective'],
                                                         'decomposition': res['decomposition'],
                                                         'smt_solver_stats': res['smt_solver_stats'],

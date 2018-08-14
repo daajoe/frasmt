@@ -34,7 +34,7 @@ from z3 import Or, Not, Sum, Implies
 
 
 class FractionalHypertreeDecomposition_z3(object):
-    def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None):
+    def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False):
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
         self.__checker_epsilon = checker_epsilon
@@ -55,6 +55,7 @@ class FractionalHypertreeDecomposition_z3(object):
         self.cards = []
         self.wprecision = wprecision
         self.stream.write('(set-option :print-success true)\n(set-option :produce-models true)\n')
+        self.ghtd = ghtd
 
     def prepare_vars(self):
         n = self.hypergraph.number_of_nodes()
@@ -94,8 +95,12 @@ class FractionalHypertreeDecomposition_z3(object):
         for j in xrange(1, n + 1):
             for ej in xrange(1, m + 1):
                 # (declare-const weight_j_e Real)
-                self.weight[j][ej] = self.add_var(name='weight[%s][e%s]' % (j, ej), dtype=z3.Real)
-                self.stream.write("(declare-const weight_{i}_e{ej} Real)\n".format(i=j, ej=ej))
+                if self.ghtd:
+                    self.weight[j][ej] = self.add_var(name='weight[%s][e%s]' % (j, ej), dtype=z3.Int)
+                    self.stream.write("(declare-const weight_{i}_e{ej} Int)\n".format(i=j, ej=ej))
+                else:
+                    self.weight[j][ej] = self.add_var(name='weight[%s][e%s]' % (j, ej), dtype=z3.Real)
+                    self.stream.write("(declare-const weight_{i}_e{ej} Real)\n".format(i=j, ej=ej))
 
                 self.__solver.add(self.literal(self.weight[j][ej]) <= 1)
                 self.__solver.add(self.literal(self.weight[j][ej]) >= 0)
@@ -383,7 +388,7 @@ class FractionalHypertreeDecomposition_z3(object):
         ordering = range(1, self.hypergraph.number_of_nodes() + 1)
         return sorted(ordering, cmp=cmp)
 
-    def solve(self, m=None, lbound=1, ubound=None, clique=None, twins=None, ghtd=False):
+    def solve(self, m=None, lbound=1, ubound=None, clique=None, twins=None):
         opt = False
         if not m:
             opt = True
@@ -393,13 +398,13 @@ class FractionalHypertreeDecomposition_z3(object):
 
         if opt:
             #TODO: next Integer in case of ghtd
-            if ghtd:
+            if self.ghtd:
                 var = self.add_var("m", z3.Int)
             else:
                 var = self.add_var("m", z3.Real)
             m = self._vartab[var]
             self.__solver.add(m > 0)
-            if ghtd:
+            if self.ghtd:
                 self.stream.write("(declare-const m Int)\n")
             else:
                 self.stream.write("(declare-const m Real)\n")
@@ -463,6 +468,7 @@ class FractionalHypertreeDecomposition_z3(object):
                                                                   weights=weights,
                                                                   checker_epsilon=self.__checker_epsilon)
             # encoding = str(self.__solver.statistics)
+            print fhtd
 
             if isinstance(res, z3.IntNumRef):
                 rsx = Decimal(res.as_long())
@@ -506,7 +512,10 @@ class FractionalHypertreeDecomposition_z3(object):
                 logging.debug(" Mod weight_{i}_e{j}={val}".format(i=i, j=e, val=val))
                 # print model
                 # print "Mod weight_{i}_e{j}={val}".format(i=i, j=e, val=val)
-                ret[i][e] = float(val.numerator_as_long()) / float(val.denominator_as_long())
+                if self.ghtd:
+                    ret[i][e] = val.as_long()
+                else:
+                    ret[i][e] = float(val.numerator_as_long()) / float(val.denominator_as_long())
                 # print dir(model[self._vartab.get(m)])
                 # print float(model[self._vartab.get(m)].numerator_as_long()) / float(model[self._vartab.get(m)].denominator_as_long())
                 # print "weight_{i}_e{j}={val} ".format(i=i, j=e, val=val),

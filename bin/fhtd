@@ -105,6 +105,8 @@ def parse_args():
                             help='Due missing arbitary precision within solvers we might run into rounding issues. '
                                  'Therefore, we allow here to specify an additive precision offset (for the checker). '
                                  'Default value = 0.001', default=Decimal(0.001))
+    parser.add_argument('-i', '--info', dest='info', action='store_true',
+                            help='Prints basic information about the instance and exits.', default=False)
 
     parser.add_argument('--runid', dest='run', action='store', type=int,
                         help='ignored')
@@ -152,12 +154,13 @@ def main():
     # stream = open("output.txt", "w+")
     # x.write(self.stream.getvalue())
 
-    decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon)
+    decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon,
+                                               ghtd=ghtd)
 
     try:
         res = decomposer.solve(only_fhtw=only_fhtd, encode_cliques=encode_cliques,
                                encode_twins=encode_twins, clique_k=clique_k,
-                               run_preprocessing=not no_pre, upper_bound=upper_bound, ghtd=ghtd,
+                               run_preprocessing=not no_pre, upper_bound=upper_bound,
                                preprocessing_only=preprocessing_only)
         # set to True for fhtw only
         wall = time.time() - wall_start

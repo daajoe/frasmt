@@ -1,0 +1,6 @@
+GraduateStudent(X14),
+University(X15),
+memberOf(X11,X14),
+undergraduateDegreeFrom(X14,X15),
+subOrganizationOf(X11,X15),
+Department(X11).
