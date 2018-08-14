@@ -23,6 +23,7 @@ import logging
 import logging.config
 import os
 import signal
+import socket
 import sys
 import time
 from cStringIO import StringIO
@@ -106,7 +107,7 @@ def parse_args():
                                  'Therefore, we allow here to specify an additive precision offset (for the checker). '
                                  'Default value = 0.001', default=Decimal(0.001))
     parser.add_argument('-i', '--info', dest='info', action='store_true',
-                            help='Prints basic information about the instance and exits.', default=False)
+                        help='Prints basic information about the instance and exits.', default=False)
 
     parser.add_argument('--runid', dest='run', action='store', type=int,
                         help='ignored')
@@ -141,11 +142,13 @@ def main():
     # td = TreeDecomposition(pgraph_view, timeout=20, stream=td_stream)
     # res = td.solve()
     # print "Objective", res['objective']
-    output = {'version': version, 'instance_path': fname, 'instance': os.path.basename(fname),
+
+    output = {'hostname': socket.gethostname(),
+              'version': version, 'instance_path': fname, 'instance': os.path.basename(fname),
               'solved': 0, 'hash': sha256_checksum(fname), 'epsilon': str(epsilon), 'wall': None,
               '#hyperedges': hypergraph.number_of_edges(), '#vertices': hypergraph.number_of_nodes(),
               'size_largest_hyperedge': hypergraph.size_largest_hyperedge(), 'ghtd': int(ghtd),
-              'parameters': {'ck': clique_k, 'ncb': int(not(encode_cliques)), 'ntb': int(not(encode_twins)),
+              'parameters': {'ck': clique_k, 'ncb': int(not (encode_cliques)), 'ntb': int(not (encode_twins)),
                              'np': int(no_pre), 'nsmt': int(preprocessing_only), 'bo': int(only_fhtd)}}
 
     wall_start = time.time()
