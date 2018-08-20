@@ -467,8 +467,8 @@ class FractionalHypertreeDecomposition_z3(object):
             fhtd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
                                                                   weights=weights,
                                                                   checker_epsilon=self.__checker_epsilon)
+            #print fhtd
             # encoding = str(self.__solver.statistics)
-            print fhtd
 
             if isinstance(res, z3.IntNumRef):
                 rsx = Decimal(res.as_long())
