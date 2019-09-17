@@ -26,7 +26,7 @@ from htd_validate.decompositions import fhtd
 from htd_validate.utils.hypergraph_primalview import Hypergraph, HypergraphPrimalView
 
 from fhtd.preprocessing import FractionalHyperTreeDecomposition_Preprocessor as Preprocessor
-from fhtd.smt import FractionalHypertreeDecomposition_z3
+from fhtd.smt import FractionalHypertreeDecomposition_OptiMathSAT
 
 
 class FractionalHypertreeDecomposer:
@@ -45,7 +45,8 @@ class FractionalHypertreeDecomposer:
     # fix ordering; compute independently for each biconnected component
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
-              encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False):
+              encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
+              FractionalHypertreeDecomposition=FractionalHypertreeDecomposition_OptiMathSAT):
         pre_wall = time.time()
         if self.ghtd:
             run_preprocessing=False
@@ -136,7 +137,7 @@ class FractionalHypertreeDecomposer:
                         continue
 
                     z3_wall = time.time()
-                    decomposer = FractionalHypertreeDecomposition_z3(self._pp.hgp.hg, timeout=self.timeout,
+                    decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
                                                                      checker_epsilon=self.__checker_epsilon,
                                                                      ghtd=self.ghtd)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,

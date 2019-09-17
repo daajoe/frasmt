@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # Copyright 2018
 #
@@ -13,8 +13,6 @@
 # copy of the GNU General Public License along with
 # fhtd.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import absolute_import
-
 import argparse
 import ctypes
 import inspect
@@ -24,12 +22,14 @@ import logging.config
 import os
 import signal
 import socket
+import subprocess
 import sys
 import time
-from cStringIO import StringIO
 from decimal import Decimal
+from io import StringIO
 
-import git
+# TODO:
+# import git
 
 __license__ = 'GPL'
 __version__ = '0.0.1-dev'
@@ -70,6 +70,9 @@ def is_valid_file(parser, arg):
 
 
 # available_local_solvers = [trellis.decomposer.Tamaki2016, trellis.decomposer.Tamaki2017, trellis.decomposer.Jdrasil2016,
+
+from fhtd.smt import FractionalHypertreeDecomposition_OptiMathSAT
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='%(prog)s -f instance')
@@ -120,9 +123,7 @@ def parse_args():
 
 
 def main():
-    repo = git.Repo(search_parent_directories=True)
-    solver_sha = repo.head.object.hexsha
-    version = repo.git.rev_parse(solver_sha, short=7)
+    version = subprocess.check_output(["git", "describe", "--always"]).strip()
 
     args = parse_args()
     fname = args.instance

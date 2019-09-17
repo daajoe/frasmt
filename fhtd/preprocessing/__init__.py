@@ -1,1 +1,1 @@
-from preprocessing import FractionalHyperTreeDecomposition_Preprocessor
+from fhtd.preprocessing.preprocessing import FractionalHyperTreeDecomposition_Preprocessor

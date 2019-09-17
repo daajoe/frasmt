@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env false
 # coding=utf-8
 import logging
 import os
-import sys
 
 import psutil
 

@@ -1,7 +1,8 @@
-name: fhtd_base
+name: fhtd_full
 channels:
   - conda-forge
   - defaults
+  - potassco
 dependencies:
   #mandatory: graph library
   - networkx>=2.2
@@ -11,3 +12,6 @@ dependencies:
   - lxml>=4.1.1
   #mandatory: signal handling and kill pstrees
   - psutil
+  #optional: largest clique via asp
+  - clingo
+  # TODO: pymonad pip

@@ -25,31 +25,25 @@ from decimal import Decimal
 from itertools import combinations
 
 import z3
-# noinspection PyUnresolvedReferences
 from htd_validate.decompositions import FractionalHypertreeDecomposition
-# noinspection PyUnresolvedReferences
-from z3 import Or, Not, Sum, Implies
 
 
 # import hypergraph_preprocessing.util as util
 # util.import_libs()
 
 
-class FractionalHypertreeDecomposition_z3(object):
+class FractionalHypertreeDecomposition_OptiMathSAT(object):
     def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False):
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
         self.__checker_epsilon = checker_epsilon
         self.hypergraph = hypergraph
-        self.num_vars = 1
+        self.num_vars = 0
         self.num_cls = 0
         self.timeout = timeout
         self.ord = None
         self.arc = None
         self.weight = None
-
-        # self.__solver = z3.Solver()
-        self.__solver = z3.Optimize()
 
         self.__clauses = []
         self._vartab = {}
@@ -71,7 +65,7 @@ class FractionalHypertreeDecomposition_z3(object):
             for j in range(i + 1, n + 1):
                 # for j in range(i + 1, n + 1):
                 # (declare-const ord_ij Bool)
-                self.ord[i][j] = self.add_var(name='ord_%s_%s' % (i, j), dtype=z3.Bool)
+                self.ord[i][j] = self.add_var(name='ord_%s_%s' % (i, j))
                 self.stream.write("(declare-const ord_{i}_{j} Bool)\n".format(i=i, j=j))
 
         # print self.hypergraph.nodes()
@@ -87,7 +81,7 @@ class FractionalHypertreeDecomposition_z3(object):
         for i in range(1, n + 1):
             for j in range(1, n + 1):
                 # declare arc_ij variables
-                self.arc[i][j] = self.add_var(name='arc_%s_%s' % (i, j), dtype=z3.Bool)
+                self.arc[i][j] = self.add_var(name='arc_%s_%s' % (i, j))
                 self.stream.write("(declare-const arc_{i}_{j} Bool)\n".format(i=i, j=j))
 
         # weights
@@ -97,36 +91,25 @@ class FractionalHypertreeDecomposition_z3(object):
         for j in range(1, n + 1):
             for ej in range(1, m + 1):
                 # (declare-const weight_j_e Real)
+                self.weight[j][ej] = self.add_var(name='weight_%s_e%s' % (j, ej))
                 if self.ghtd:
-                    self.weight[j][ej] = self.add_var(name='weight[%s][e%s]' % (j, ej), dtype=z3.Int)
                     self.stream.write("(declare-const weight_{i}_e{ej} Int)\n".format(i=j, ej=ej))
                 else:
-                    self.weight[j][ej] = self.add_var(name='weight[%s][e%s]' % (j, ej), dtype=z3.Real)
                     self.stream.write("(declare-const weight_{i}_e{ej} Real)\n".format(i=j, ej=ej))
 
-                self.__solver.add(self.literal(self.weight[j][ej]) <= 1)
-                self.__solver.add(self.literal(self.weight[j][ej]) >= 0)
                 self.stream.write("(assert (<= weight_{i}_e{ej} 1))\n".format(i=j, ej=ej))
                 self.stream.write("(assert (>= weight_{i}_e{ej} 0))\n".format(i=j, ej=ej))
 
-    def add_cards(self, C):
-        self.cards.append(C)
-
     # z3.Real
-    def add_var(self, name, dtype=z3.Bool):
+    def add_var(self, name):
         vid = self.num_vars
-        symb = dtype(name=name)
-        # symb = getattr(z3,dtype)()
-        # symb = Symbol(name=name, typename=dtype)
-        logging.debug("Add Variable %s=(%s)" % (vid, symb))
-        self._vartab[vid] = symb
+
+        self._vartab[vid] = name
         self.num_vars += 1
-        # exit(1)
         return vid
 
-    def literal(self, x):
-        logging.debug("Literal %s (var: %s)" % (x, self._vartab[abs(x)]))
-        return Not(self._vartab[abs(x)]) if x < 0 else self._vartab.get(x)
+    def add_cards(self, C):
+        self.cards.append(C)
 
     def literal_str(self, x):
         if x < 0:
@@ -138,8 +121,6 @@ class FractionalHypertreeDecomposition_z3(object):
     def add_clause(self, C):
         # C = map(neg, C)
         # self.stream.write("%s 0\n" %" ".join(map(str,C)))
-        f = Or([self.literal(x) for x in C])
-        self.__solver.add(f)
         self.stream.write("(assert (or %s))\n" % (' '.join([self.literal_str(x) for x in C])))
         self.num_cls += 1
 
@@ -157,16 +138,18 @@ class FractionalHypertreeDecomposition_z3(object):
                 weights.append("weight_{j}_e{e}".format(j=j, e=e))
 
             # set optimization variable or value for SAT check
-            C = [self.literal(x) for x in C0]
-            f = (Sum(C) <= m)
-            logging.debug("Assertation %s" % f)
-            self.__solver.add(f)
-
-            self.stream.write(
-                "(assert ( <= (+ {weights}) {m}))\n".format(weights=" ".join(weights), m=m))
+            # C = [self.literal(x) for x in C0]
+            # f = (Sum(C) <= m)
+            # logging.debug("Assertation %s" % f)
+            # self.__solver.add(f)
+            # set optimization variable or value for SAT check
+            if len(weights) > 1:
+                self.stream.write(
+                    "(assert ( <= (+ {weights}) {m}))\n".format(weights=" ".join(weights), m=m))
+            elif len(weights) == 1:
+                self.stream.write("(assert (<= {} {}))\n".format(weights[0], m))
 
     def elimination_ordering(self, n):
-        ord = lambda p, q: self.literal(self.ord[p][q]) if p < q else Not(self.literal(self.ord[q][p]))
         tord = lambda p, q: 'ord_{p}{q}'.format(p=p, q=q) if p < q \
             else '(not ord_{q}{p})'.format(p=p, q=q)
 
@@ -184,19 +167,6 @@ class FractionalHypertreeDecomposition_z3(object):
                     C.append(-self.ord[j][l] if j < l else self.ord[l][j])
                     C.append(self.ord[i][l] if i < l else -self.ord[l][i])
                     self.add_clause(C)
-                    # IMPLIES VERSION
-                    # (assert (=> (and ord_ij ord_jl) ord_il)
-
-                    # logging.debug(
-                    #     "i=%s j=%s l=%s ord[i][j]=%s, ord[j][l]=%s" % (i, j, l, self.ord[i][j], self.ord[j][l]))
-                    # f = Implies(And(ord(i, j), ord(j, l)), ord(i, l))
-                    # Or([self.literal(x) for x in C])
-                    # self.__solver.add_assertion(f)
-                    # (assert (=> (and ord_ij ord_jl) ord_il)
-                    # self.stream.write(
-                    #    "(assert (=> (and ord_{i}{j} ord_{j}{l}) ord_{i}{l}))\n".format(i=i, j=j, l=l))
-                    # self.stream.write(
-                    #     "(assert (=> (and %s %s) %s))\n" % (tord(i, j), tord(j, l), tord(i, l)))
 
         logging.info('Edges')
         # OLD VERSION
@@ -212,14 +182,6 @@ class FractionalHypertreeDecomposition_z3(object):
                 if i > j:
                     i, j = j, i
                 if i < j:
-                    # AS IMPLICATION
-                    # f = Implies(self.literal(self.ord[i][j]), self.literal(self.arc[i][j]))
-                    # self.__solver.add_assertion(f)
-                    # f = Implies(Not(self.literal(self.ord[i][j])), self.literal(self.arc[j][i]))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write("(assert (=> ord_{i}{j} arc_{i}{j}))\n".format(i=i, j=j))
-                    # self.stream.write("(assert (=> (not ord_{i}{j}) arc_{j}{i}))\n".format(i=i, j=j))
-
                     # AS CLAUSE
                     self.add_clause([self.ord[i][j], self.arc[j][i]])
                     self.add_clause([-self.ord[i][j], self.arc[i][j]])
@@ -232,33 +194,11 @@ class FractionalHypertreeDecomposition_z3(object):
                 for l in range(j + 1, n + 1):
                     if i == l:
                         continue
-                    # # AS IMPLICATION
-                    # f = Implies(And(self.literal(self.arc[i][j]),
-                    #                 And(self.literal(self.arc[i][l]), self.literal(self.ord[j][l]))),
-                    #             self.literal(self.arc[j][l]))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write(
-                    #     "(assert (=> (and arc_{i}{j} arc_{i}{l} ord_{j}{l}) arc_{j}{l}))\n".format(i=i, j=j, l=l))
-                    #
-                    # f = Implies(And(self.literal(self.arc[i][j]),
-                    #                 And(self.literal(self.arc[i][l]), Not(self.literal(self.ord[j][l])))),
-                    #             self.literal(self.arc[l][j]))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write(
-                    #     "(assert (=> (and arc_{i}{j} arc_{i}{l} (not ord_{j}{l})) arc_{l}{j}))\n".format(i=i, j=j, l=l))
-                    #
-                    # # redundant
-                    # f = Or(Not(self.literal(self.arc[i][j])), Or(Not(self.literal(self.arc[i][l])),
-                    #                                              Or(self.literal(self.arc[j][l]),
-                    #                                                 self.literal(self.arc[l][j]))))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write(
-                    #     "(assert (or (not arc_{i}{j}) (not arc_{i}{l}) arc_{j}{l} arc_{l}{j}))\n".format(i=i, j=j, l=l))
 
                     # AS CLAUSE
                     self.add_clause([-self.arc[i][j], -self.arc[i][l], -self.ord[j][l], self.arc[j][l]])
                     self.add_clause([-self.arc[i][j], -self.arc[i][l], self.ord[j][l], self.arc[l][j]])
-                    # redunant
+                    # redundant
                     self.add_clause([-self.arc[i][j], -self.arc[i][l], self.arc[j][l], self.arc[l][j]])
 
         logging.info('Forbid Self Loops')
@@ -291,10 +231,12 @@ class FractionalHypertreeDecomposition_z3(object):
                     C.append(self.weight[i][e])
                     weights.append("weight_{i}_e{e}".format(i=i, e=e))
 
-                C = [self.literal(x) for x in C]
-                f = Implies(self.literal(self.arc[i][j]), (Sum(C) >= 1.0))
-                logging.debug(" Assertation %s" % f)
-                self.__solver.add(f)
+                #TODO: continue HERE
+
+                # C = [self.literal(x) for x in C]
+                # f = Implies(self.literal(self.arc[i][j]), (Sum(C) >= 1.0))
+                # logging.debug(" Assertation %s" % f)
+                # self.__solver.add(f)
                 self.stream.write(
                     "(assert (=> arc_{i}_{j} (>= (+ {weights}) 1)))\n".format(i=i, j=j, weights=" ".join(weights)))
 
@@ -306,11 +248,11 @@ class FractionalHypertreeDecomposition_z3(object):
                     C.append(self.weight[i][e])
                     weights.append("weight_{i}_e{e}".format(i=i, e=e))
 
-                C = [self.literal(x) for x in C]
-                f = (Sum(C) >= 1.0)
-                logging.debug(" Assertation %s" % f)
+                # C = [self.literal(x) for x in C]
+                # f = (Sum(C) >= 1.0)
+                # logging.debug(" Assertation %s" % f)
 
-                self.__solver.add(f)
+                # self.__solver.add(f)
                 self.stream.write(
                     "(assert (>= (+ {weights}) 1))\n".format(weights=" ".join(weights)))
         # assert (=> arc_ij  (>= (+ weight_j_e2 weight_j_e5 weight_j_e7 ) 1) )
@@ -388,7 +330,6 @@ class FractionalHypertreeDecomposition_z3(object):
         logging.info("Reconstruct Ordering")
 
         ordering = range(1, self.hypergraph.number_of_nodes() + 1)
-        raise NotImplementedError
         return sorted(ordering, cmp=cmp)
 
     def solve(self, m=None, lbound=1, ubound=None, clique=None, twins=None):
@@ -400,13 +341,6 @@ class FractionalHypertreeDecomposition_z3(object):
         logging.info("WE ARE SOLVING FOR fraction = %s" % m)
 
         if opt:
-            #TODO: next Integer in case of ghtd
-            if self.ghtd:
-                var = self.add_var("m", z3.Int)
-            else:
-                var = self.add_var("m", z3.Real)
-            m = self._vartab[var]
-            self.__solver.add(m > 0)
             if self.ghtd:
                 self.stream.write("(declare-const m Int)\n")
             else:
@@ -430,25 +364,21 @@ class FractionalHypertreeDecomposition_z3(object):
 
         if opt:
             if ubound:
-                self.__solver.add(m <= ubound)
+                self.stream.write("(assert (<= m {ub}))\n".format(ub=ubound))
+
             if lbound:
-                self.__solver.add(m >= lbound)
+                self.stream.write("(assert (>= m {lb}))\n".format(lb=lbound))
 
             # #THERE IS A PROBLEM WITH MINIMIZATION APPARENTLY
             # # #WIE WILL STEFAN PROGRESSION ERKLAEREN???
-            h = self.__solver.minimize(m)
             self.stream.write("(minimize m)\n")
-
-
-            # with open("output.txt", "w+") as x:
-            #     x.write(self.stream.getvalue())
-
-            sat = self.__solver.check()
             self.stream.write("(check-sat)\n(get-value (m))\n(get-objectives)\n")
-            logging.info("SMT solver returned: %s" % sat)
+
+            # logging.info("SMT solver returned: %s" % sat)
             # self.__solver.add(z3.OptimizeObjective(z3.OptimizeObj,m,ubound))
             # TODO: fix for lower bound
 
+            raise NotImplementedError
             res = self.__solver.lower(h)
             logging.warning("SMT solver objective: %s" % res)
             logging.warning("SMT solver objective(lower): %s" % res)
@@ -473,6 +403,7 @@ class FractionalHypertreeDecomposition_z3(object):
             #print fhtd
             # encoding = str(self.__solver.statistics)
 
+            #TODO(jf): fixme
             if isinstance(res, z3.IntNumRef):
                 rsx = Decimal(res.as_long())
             else:

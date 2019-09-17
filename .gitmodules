@@ -1,3 +1,9 @@
 [submodule "lib/htd_validate"]
 	path = lib/htd_validate
 	url = git@github.com:daajoe/htd_validate.git
+[submodule "lib/clique/multithreadedmaximumclique"]
+	path = lib/clique/multithreadedmaximumclique
+	url = git@github.com:ciaranm/multithreadedmaximumclique.git
+[submodule "lib/clique/pmc"]
+	path = lib/clique/pmc
+	url = git@github.com:ryanrossi/pmc.git
