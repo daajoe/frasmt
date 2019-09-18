@@ -29,7 +29,7 @@ def read_hyper_graph(fname):
             ed.append(temp_ed)
             # temp_og.add_edge(int(l3[0]), int(l3[1]))
         if len(ed)!=temp_ne:
-            print "edges missing:",temp_ne,len(ed)
+            print("edges missing:",temp_ne,len(ed))
     return ed, temp_nv
 
 
@@ -68,7 +68,7 @@ def main():
     os.chdir(path)
     ed, nv = read_hyper_graph(fname)
     ne = len(ed)
-    print ed
+    print(ed)
     g=nx.Graph()
     g.add_edges_from(ed)
 

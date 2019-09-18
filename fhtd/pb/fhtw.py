@@ -289,10 +289,10 @@ class GraphSatTw(object):
 
         try:
             clique = next(nx.find_cliques(self.G))
-            print 'clique', clique
+            print('clique', clique)
             self.break_clique(clique)
         except StopIteration:
-            print 'no clique'
+            print('no clique')
             pass
 
         # for clique in nx.find_cliques(hypergraph):
@@ -315,7 +315,7 @@ class GraphSatTw(object):
     def solve(self, m):
         self.encode()
         self.add_all_at_most(m)
-        print 'm=%s, timeout=%s' % (m, self.timeout)
+        print('m=%s, timeout=%s' % (m, self.timeout))
         f = self.ctl.solve_async()  # on_model, on_finish)
         done = f.wait(self.timeout)
         if not done:
@@ -358,9 +358,9 @@ class GraphSatTw(object):
             # G1 = self.hypergraph.copy()
             lbound_solver = GraphSatTw(G1, timeout=timeout)
 
-            print 'u = %s, v = %s' % (u, v)
+            print('u = %s, v = %s' % (u, v))
             ret = lbound_solver.solve(k)
-            print 'ret = %s' % ret
+            print('ret = %s' % ret)
             if not ret:
                 return False
 
@@ -374,24 +374,24 @@ class GraphSatTw(object):
             # print G1.edges()
             lbound_solver = GraphSatTw(G1)
             res = lbound_solver.solve(k)
-            print 'node=%s, bound=%s, res=%s' % (n, k, res)
+            print('node=%s, bound=%s, res=%s' % (n, k, res))
 
     @property
     def treewidth(self):
         start = time.time()
-        print 'encode'
+        print('encode')
         self.encode()
         elapsed = time.time() - start
-        print 'encode finished'
-        print 'encoding time = %s' % elapsed
+        print('encode finished')
+        print('encoding time = %s' % elapsed)
         # timeout = self.timeout
         timeout = 0
 
         for m in xrange(ubound, 0, -1):
             timeout = np.ceil(timeout)
             start = time.time()
-            print '=' * 80
-            print 'm=%s, timeout=%s' % (m, timeout)
+            print('=' * 80)
+            print('m=%s, timeout=%s' % (m, timeout))
             self.add_all_at_most(m)
             f = self.ctl.solve_async()  # on_model, on_finish)
             done = f.wait(timeout)
@@ -401,12 +401,12 @@ class GraphSatTw(object):
                 if timeout < diff:
                     timeout = timeout / 0.97
 
-                print '-' * 20, 'minor', '-' * 20
+                print('-' * 20, 'minor', '-' * 20)
                 # TODO:
                 # self.minor_lbound(6, m)
                 res = self.minor_lbound_num(m, timeout)
                 if not res is None and res == False:
-                    print 'solution found=%i' % (m + 1)
+                    print('solution found=%i' % (m + 1))
                     return m + 1
 
                     # self.subgraph_lbound(m)
@@ -416,10 +416,10 @@ class GraphSatTw(object):
             if timeout < diff:
                 timeout = timeout / 0.97
 
-            print f.get().satisfiable
+            print(f.get().satisfiable)
             if not f.get().satisfiable:
-                print 'solution found=',
-                print m + 1
+                print('solution found=',)
+                print(m + 1)
                 return m + 1
 
 

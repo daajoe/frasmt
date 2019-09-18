@@ -204,7 +204,7 @@ class FractionalHyperTreeDecomposition_Preprocessor:
             self.update_finished_cliques(contr, erepr)
             # self.addReplay(e[1:], parent_bag_required=(e[0:1],))
             # print ngbs, e
-            for (k, v) in repl.iteritems():
+            for (k, v) in repl.items():
                 if v in contr:
                     repl[k] = erepr
             for v in contr:

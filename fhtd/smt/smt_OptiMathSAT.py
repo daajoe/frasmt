@@ -18,6 +18,8 @@ from __future__ import absolute_import
 
 import logging
 import re
+import subprocess
+import tempfile
 import time
 # import htd_validate
 from io import StringIO
@@ -25,6 +27,7 @@ from decimal import Decimal
 from itertools import combinations
 
 import z3
+# noinspection PyUnresolvedReferences
 from htd_validate.decompositions import FractionalHypertreeDecomposition
 
 
@@ -231,7 +234,7 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                     C.append(self.weight[i][e])
                     weights.append("weight_{i}_e{e}".format(i=i, e=e))
 
-                #TODO: continue HERE
+                # TODO: continue HERE
 
                 # C = [self.literal(x) for x in C]
                 # f = Implies(self.literal(self.arc[i][j]), (Sum(C) >= 1.0))
@@ -340,13 +343,6 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
             ubound = len(self.hypergraph.edges())
         logging.info("WE ARE SOLVING FOR fraction = %s" % m)
 
-        if opt:
-            if self.ghtd:
-                self.stream.write("(declare-const m Int)\n")
-            else:
-                self.stream.write("(declare-const m Real)\n")
-            self.stream.write("(assert (>= m 1))\n")
-
         self.prepare_vars()
         self.configration()
 
@@ -363,21 +359,20 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                "smt_solver_stats": None, "smt_objective": "nan"}
 
         if opt:
-            if ubound:
-                self.stream.write("(assert (<= m {ub}))\n".format(ub=ubound))
-
-            if lbound:
-                self.stream.write("(assert (>= m {lb}))\n".format(lb=lbound))
-
-            # #THERE IS A PROBLEM WITH MINIMIZATION APPARENTLY
-            # # #WIE WILL STEFAN PROGRESSION ERKLAEREN???
-            self.stream.write("(minimize m)\n")
+            self.encode_opt(opt, lbound=lbound,ubound=ubound)
             self.stream.write("(check-sat)\n(get-value (m))\n(get-objectives)\n")
 
-            # logging.info("SMT solver returned: %s" % sat)
-            # self.__solver.add(z3.OptimizeObjective(z3.OptimizeObj,m,ubound))
-            # TODO: fix for lower bound
+            #TODO: delete configurable
+            #TODO: prefix='tmp'[, dir=None
+            with tempfile.SpooledTemporaryFile() as inpf:
+                with tempfile.SpooledTemporaryFile() as modelf:
+                    with tempfile.SpooledTemporaryFile() as errorf:
+                        #TODO: is_z3
+                        is_z3 = False
+                        slv = "/home/vagrant/bin/optimathsat"
+                        self.run_solver(slv, inpf, modelf, errorf, is_z3)
 
+            #decode
             raise NotImplementedError
             res = self.__solver.lower(h)
             logging.warning("SMT solver objective: %s" % res)
@@ -400,10 +395,10 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
             fhtd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
                                                                   weights=weights,
                                                                   checker_epsilon=self.__checker_epsilon)
-            #print fhtd
+            # print fhtd
             # encoding = str(self.__solver.statistics)
 
-            #TODO(jf): fixme
+            # TODO(jf): fixme
             if isinstance(res, z3.IntNumRef):
                 rsx = Decimal(res.as_long())
             else:
@@ -430,6 +425,19 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
             res = self.__solver.check()
             logging.warning("SMT Solver result=%s" % res)
             return {'sat': res}
+
+    def encode_opt(self, opt, lbound=None, ubound=None):
+        if opt:
+            if self.ghtd:
+                self.stream.write("(declare-const m Int)\n")
+            else:
+                self.stream.write("(declare-const m Real)\n")
+            self.stream.write("(assert (>= m 1))\n")
+            self.stream.write("(minimize m)\n")
+            if ubound:
+                self.stream.write("(assert (<= m {ub}))\n".format(ub=ubound))
+            if lbound:
+                self.stream.write("(assert (>= m {lb}))\n".format(lb=lbound))
 
     def _get_weights(self, model, ordering):
         logging.info("Reconstruct weights")
@@ -462,3 +470,25 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
 
         logging.debug("Weights = %s" % ret)
         return ret
+
+    def run_solver(self, slv, inpf, modelf, errorf, is_z3):
+        inpf.seek(0)
+        if is_z3:
+            p1 = subprocess.Popen([slv, '-smt2', '-in'], stdin=inpf, stdout=modelf, stderr=errorf)
+        else:
+            p1 = subprocess.Popen(slv, stdin=inpf, stdout=modelf, stderr=errorf, shell=True)
+
+        p1.wait()
+        # Retrieve the result
+        modelf.seek(0)
+        errorf.seek(0)
+        outp = modelf.read()
+        errp = errorf.read()
+
+        if len(errp) > 0:
+            raise RuntimeError(errp)
+
+        print(outp)
+        print(errp)
+
+        raise NotImplementedError

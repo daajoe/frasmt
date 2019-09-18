@@ -3,6 +3,8 @@ channels:
   - conda-forge
   - defaults
   - potassco
+  # cplex
+  - ibmdecisionoptimization
 dependencies:
   #mandatory: graph library
   - networkx>=2.2
@@ -15,3 +17,4 @@ dependencies:
   #optional: largest clique via asp
   - clingo
   # TODO: pymonad pip
+  - cplex

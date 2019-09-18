@@ -55,7 +55,7 @@ class td:
             self.nr += 1
             rhs.append(0)
             senses.append('hypergraph')
-        print len(row), len(senses), len(rhs), len(rows)
+        print(len(row), len(senses), len(rhs), len(rows))
         prob.linear_constraints.add(lin_expr=row, senses=senses, rhs=rhs, names=rows)
 
     def second_sum(self, prob):
@@ -235,15 +235,15 @@ class td:
         self.fifth_sum(prob, g)
         self.sixth_sum(prob)
         prob.write('form.lp')
-        print "solving"
-        print self.nr, self.ng
-        print self.varlist
+        print("solving")
+        print(self.nr, self.ng)
+        print(self.varlist)
         try:
             prob.solve()
-            print prob.solution.get_values('w')
+            print(prob.solution.get_values('w'))
             return prob.solution.get_values('w')
         except Exception as e:
-            print e
+            print(e)
             # print "timeout"
             return False
 
@@ -287,8 +287,8 @@ class flow_network(td):
         my_lb[self.w] = 0
         types = [prob.variables.type.binary] * self.ng
         types[self.w] = prob.variables.type.integer
-        print len(my_obj), len(my_ub), len(self.varlist), len(types), len(my_lb)
-        print self.varlist
+        print(len(my_obj), len(my_ub), len(self.varlist), len(types), len(my_lb))
+        print(self.varlist)
         prob.variables.add(obj=my_obj, ub=my_ub, names=self.varlist, types=types, lb=my_lb)
 
     def fifteenth_sum(self, prob, graph):
@@ -317,7 +317,7 @@ class flow_network(td):
                     self.nr += 1
                     rhs.append(0)
                     senses.append('E')
-                    print row
+                    print(row)
                 prob.linear_constraints.add(lin_expr=row, senses=senses, rhs=rhs, names=rows)
 
     def make_prob(self, g, time_out=600):
@@ -336,15 +336,15 @@ class flow_network(td):
         # self.fifth_sum(prob, g)
         # self.sixth_sum(prob)
         prob.write('form.lp')
-        print "solving"
-        print self.nr, self.ng
-        print self.varlist
+        print("solving")
+        print(self.nr, self.ng)
+        print(self.varlist)
         try:
             prob.solve()
-            print prob.solution.get_values('w')
+            print(prob.solution.get_values('w'))
             return prob.solution.get_values('w')
         except Exception as e:
-            print e
+            print(e)
             # print "timeout"
             return False
 
@@ -380,7 +380,7 @@ class ghtd(td):
             self.nr += 1
             rhs.append(0)
             senses.append('hypergraph')
-        print len(row), len(senses), len(rhs), len(rows)
+        print(len(row), len(senses), len(rhs), len(rows))
         prob.linear_constraints.add(lin_expr=row, senses=senses, rhs=rhs, names=rows)
 
     def thirtysixth_sum(self, prob, graph):
@@ -408,7 +408,7 @@ class ghtd(td):
                 self.nr += 1
                 rhs.append(0)
                 senses.append('L')
-        print len(row), len(senses), len(rhs), len(rows)
+        print(len(row), len(senses), len(rhs), len(rows))
         # print row
         prob.linear_constraints.add(lin_expr=row, senses=senses, rhs=rhs, names=rows)
 
@@ -432,7 +432,7 @@ class ghtd(td):
             self.nr += 1
             rhs.append(0)
             senses.append('hypergraph')
-        print len(row), len(senses), len(rhs), len(rows)
+        print(len(row), len(senses), len(rhs), len(rows))
         # print row
         prob.linear_constraints.add(lin_expr=row, senses=senses, rhs=rhs, names=rows)
 
@@ -449,11 +449,11 @@ class ghtd(td):
         my_lb[self.w] = 0
         types = [prob.variables.type.binary] * self.ng
         types[self.w] = prob.variables.type.integer
-        print "*" * 60
-        print dir(prob.variables.type)
-        print "*" * 60
-        print len(my_obj), len(my_ub), len(self.varlist), len(types), len(my_lb)
-        print self.varlist
+        print("*" * 60)
+        print(dir(prob.variables.type))
+        print("*" * 60)
+        print(len(my_obj), len(my_ub), len(self.varlist), len(types), len(my_lb))
+        print(self.varlist)
         prob.variables.add(obj=my_obj, ub=my_ub, names=self.varlist, types=types, lb=my_lb)
 
     def make_prob(self, g, time_out=600):
@@ -473,15 +473,15 @@ class ghtd(td):
         self.thirtysixth_sum(prob, g)
         self.thirthyseventh_sum(prob, g)
         prob.write('form.lp')
-        print "solving"
-        print self.nr, self.ng
-        print self.varlist
+        print("solving")
+        print(self.nr, self.ng)
+        print(self.varlist)
         try:
             prob.solve()
-            print prob.solution.get_values('w')
+            print(prob.solution.get_values('w'))
             return prob.solution.get_values('w')
         except Exception as e:
-            print e
+            print(e)
             # print "timeout"
             return False
 
@@ -506,6 +506,6 @@ class fhtd(ghtd):
         for i in xrange(self.n):
             for e in xrange(self.m):
                 types[self.cov[i][e]] = prob.variables.type.continuous
-        print len(my_obj), len(my_ub), len(self.varlist), len(types), len(my_lb)
-        print self.varlist
+        print(len(my_obj), len(my_ub), len(self.varlist), len(types), len(my_lb))
+        print(self.varlist)
         prob.variables.add(obj=my_obj, ub=my_ub, names=self.varlist, types=types, lb=my_lb)

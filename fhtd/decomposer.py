@@ -49,7 +49,7 @@ class FractionalHypertreeDecomposer:
               FractionalHypertreeDecomposition=FractionalHypertreeDecomposition_OptiMathSAT):
         pre_wall = time.time()
         if self.ghtd:
-            run_preprocessing=False
+            run_preprocessing = False
             logging.warning("Option ghtd disables preprocessing for now!")
 
         # only fhtw implies connect components
@@ -98,7 +98,6 @@ class FractionalHypertreeDecomposer:
                         pre_clique_size = 1
                         clique = None
 
-
                         # Values clique_k are overloaded
                         # clique_k = 1 ..largest hyperedge, 2 .. largest_clique (Z3), k>3 k-cliques
                         if clique_k == 1:
@@ -106,7 +105,8 @@ class FractionalHypertreeDecomposer:
                         elif clique_k == 2:
                             clique = self._pp.hgp.hg.largest_clique(timeout=60)
                         else:
-                            clique_list = self._pp.hgp.hg.largest_clique_asp(prevent_k_hyperedge=clique_k, enum=False, timeout=60)[2]
+                            clique_list = \
+                            self._pp.hgp.hg.largest_clique_asp(prevent_k_hyperedge=clique_k, enum=False, timeout=60)[2]
                             if len(clique_list) > 0:
                                 clique = clique_list[0]
                             pre_clique_size = len(clique_list)
@@ -138,8 +138,8 @@ class FractionalHypertreeDecomposer:
 
                     z3_wall = time.time()
                     decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
-                                                                     checker_epsilon=self.__checker_epsilon,
-                                                                     ghtd=self.ghtd)
+                                                                  checker_epsilon=self.__checker_epsilon,
+                                                                  ghtd=self.ghtd)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
                                            clique=clique, twins=twin_vertices, ubound=upper_bound)
                     ret['subsolvers'][solver_run_id] = {'width': res['objective'],
@@ -193,13 +193,11 @@ class FractionalHypertreeDecomposer:
                             i -= 1
                         tds.append(ftd)
 
-
             logging.info("FTW {0}".format(self._pp.lb))
             if preprocessing_only:
                 ret['objective'] = 'na'
                 ret['td'] = 'na'
                 return ret
-
 
             if connect_components:
                 # print "TDs", [i.chi for i in tds]
@@ -211,9 +209,10 @@ class FractionalHypertreeDecomposer:
                 assert (tds[0].validate(whole_hgp.hg, strict=False))
                 # assert that treewidth should be within numeric range! (due to cplex)
                 if not self._pp.lb - accuracy <= tds[0].max_bag_size() <= self._pp.lb + accuracy:
-                    raise ValueError("connected (combined) fhtw should be {0}, but actually is {1}".format(self._pp.lb, tds[0].max_bag_size()))
-                    #assert (self._pp.lb - accuracy <= tds[0].max_bag_size() <= self._pp.lb + accuracy)
-
+                    raise ValueError("connected (combined) fhtw should be {0}, but actually is {1}".format(self._pp.lb,
+                                                                                                           tds[
+                                                                                                               0].max_bag_size()))
+                    # assert (self._pp.lb - accuracy <= tds[0].max_bag_size() <= self._pp.lb + accuracy)
 
         ret['objective'] = self._pp.lb
         ret['td'] = tds[0] if len(tds) > 0 else None

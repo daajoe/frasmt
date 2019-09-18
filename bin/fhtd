@@ -46,6 +46,7 @@ if src_path not in sys.path:
     for lib in libs:
         sys.path.insert(0, os.path.join(src_path, lib))
 
+# noinspection PyUnresolvedReferences
 from htd_validate import Hypergraph
 from fhtd import FractionalHypertreeDecomposer, utils
 from fhtd.utils import sha256_checksum
@@ -123,7 +124,7 @@ def parse_args():
 
 
 def main():
-    version = subprocess.check_output(["git", "describe", "--always"]).strip()
+    version = subprocess.check_output(["git", "describe", "--always"]).strip().decode('utf-8')
 
     args = parse_args()
     fname = args.instance
@@ -173,7 +174,7 @@ def main():
                        'wall': wall, 'pre_clique_size': res['pre_clique_size'],
                        'pre_clique_k': res['pre_clique_k'], 'num_twins': res['pre_num_twins'],
                        'pre_size_max_twin': res['pre_size_max_twin']})
-        logging.warn("Runtime was %s." % wall)
+        logging.warning("Runtime was %s." % wall)
         # TDs are sometimes not json serializable to we really want to remove them
         z3_wall = 0
         enc_wall = 0
