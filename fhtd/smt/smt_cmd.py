@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2018
+# Copyright 2018, 2019, 2020
 
 #
 # fhtw.py is free software: you can redistribute it and/or modify
@@ -21,22 +21,32 @@ import re
 import subprocess
 import tempfile
 import time
+from decimal import Decimal
 # import htd_validate
 from io import StringIO
-from decimal import Decimal
 from itertools import combinations
+import os
 
-import z3
 # noinspection PyUnresolvedReferences
 from htd_validate.decompositions import FractionalHypertreeDecomposition
 
 
-# import hypergraph_preprocessing.util as util
-# util.import_libs()
+# TODO: make more general so that we can call multiple solvers
+class FractionalHypertreeDecompositionCommandline(object):
+    def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False,
+                 solver_bin=None):
+        if solver_bin is None:
+            logging.error("Solver binary not given. Exiting...")
+            raise RuntimeError
+        else:
+            if not os.path.isfile(solver_bin):
+                logging.error(f"File {solver_bin} does not exist. Exiting...")
+                exit(1)
+            if not os.access(solver_bin, os.X_OK):
+                logging.error(f"File {solver_bin} is not executable. Exiting...")
+                exit(1)
+            self.solver_bin = solver_bin
 
-
-class FractionalHypertreeDecomposition_OptiMathSAT(object):
-    def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False):
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
         self.__checker_epsilon = checker_epsilon
@@ -69,7 +79,7 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                 # for j in range(i + 1, n + 1):
                 # (declare-const ord_ij Bool)
                 self.ord[i][j] = self.add_var(name='ord_%s_%s' % (i, j))
-                self.stream.write("(declare-const ord_{i}_{j} Bool)\n".format(i=i, j=j))
+                self.stream.write(f"(declare-const ord_{i}_{j} Bool)\n")
 
         # print self.hypergraph.nodes()
         # print n
@@ -85,7 +95,7 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
             for j in range(1, n + 1):
                 # declare arc_ij variables
                 self.arc[i][j] = self.add_var(name='arc_%s_%s' % (i, j))
-                self.stream.write("(declare-const arc_{i}_{j} Bool)\n".format(i=i, j=j))
+                self.stream.write(f"(declare-const arc_{i}_{j} Bool)\n")
 
         # weights
         self.weight = [[None for ej in range(m + 1)]
@@ -96,12 +106,12 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                 # (declare-const weight_j_e Real)
                 self.weight[j][ej] = self.add_var(name='weight_%s_e%s' % (j, ej))
                 if self.ghtd:
-                    self.stream.write("(declare-const weight_{i}_e{ej} Int)\n".format(i=j, ej=ej))
+                    self.stream.write(f"(declare-const weight_{j}_e{ej} Int)\n")
                 else:
-                    self.stream.write("(declare-const weight_{i}_e{ej} Real)\n".format(i=j, ej=ej))
+                    self.stream.write(f"(declare-const weight_{j}_e{ej} Real)\n")
 
-                self.stream.write("(assert (<= weight_{i}_e{ej} 1))\n".format(i=j, ej=ej))
-                self.stream.write("(assert (>= weight_{i}_e{ej} 0))\n".format(i=j, ej=ej))
+                self.stream.write(f"(assert (<= weight_{j}_e{ej} 1))\n")
+                self.stream.write(f"(assert (>= weight_{j}_e{ej} 0))\n")
 
     # z3.Real
     def add_var(self, name):
@@ -147,14 +157,20 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
             # self.__solver.add(f)
             # set optimization variable or value for SAT check
             if len(weights) > 1:
+                if m is None:
+                    m = 'm'
+                    if self.ghtd:
+                        self.stream.write("(declare-const m Int)\n")
+                    else:
+                        self.stream.write("(declare-const m Real)\n")
                 self.stream.write(
                     "(assert ( <= (+ {weights}) {m}))\n".format(weights=" ".join(weights), m=m))
             elif len(weights) == 1:
-                self.stream.write("(assert (<= {} {}))\n".format(weights[0], m))
+                self.stream.write(f"(assert (<= {weights[0]} {m}))\n")
 
     def elimination_ordering(self, n):
-        tord = lambda p, q: 'ord_{p}{q}'.format(p=p, q=q) if p < q \
-            else '(not ord_{q}{p})'.format(p=p, q=q)
+        tord = lambda p, q: f"ord_{p}{q}" if p < q \
+            else f"(not ord_{q}{p})"
 
         logging.info('Ordering')
         for i in range(1, n + 1):
@@ -223,8 +239,8 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                     continue
 
                 # TODO: add i>j
-                logging.debug("i=%s, j=%s" % (i, j))
-                logging.debug("edges: %s" % self.hypergraph.edges())
+                logging.debug(f"i={i}, j={j}")
+                logging.debug(f"edges: {self.hypergraph.edges()}")
 
                 # arc_ij then j must be covered by some edge (because j will end up in one bag)
                 weights = []
@@ -232,7 +248,7 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                 for e in self.hypergraph.incident_edges(j):
                     logging.debug(" i=%s, j=%s, e=%s" % (i, j, e))
                     C.append(self.weight[i][e])
-                    weights.append("weight_{i}_e{e}".format(i=i, e=e))
+                    weights.append(f"weight_{i}_e{e}")
 
                 # TODO: continue HERE
 
@@ -249,7 +265,7 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                 for e in self.hypergraph.incident_edges(i):
                     logging.debug(" i=%s, j=%s, e=%s" % (i, j, e))
                     C.append(self.weight[i][e])
-                    weights.append("weight_{i}_e{e}".format(i=i, e=e))
+                    weights.append(f"weight_{i}_e{e}")
 
                 # C = [self.literal(x) for x in C]
                 # f = (Sum(C) >= 1.0)
@@ -359,20 +375,18 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
                "smt_solver_stats": None, "smt_objective": "nan"}
 
         if opt:
-            self.encode_opt(opt, lbound=lbound,ubound=ubound)
-            self.stream.write("(check-sat)\n(get-value (m))\n(get-objectives)\n")
+            self.encode_opt(opt, lbound=lbound, ubound=ubound)
+            # self.stream.write("(check-sat)\n(get-value (m))\n(get-objectives)\n")
+            self.stream.write("(check-sat)\n(get-model)\n")
 
-            #TODO: delete configurable
-            #TODO: prefix='tmp'[, dir=None
-            with tempfile.SpooledTemporaryFile() as inpf:
-                with tempfile.SpooledTemporaryFile() as modelf:
-                    with tempfile.SpooledTemporaryFile() as errorf:
-                        #TODO: is_z3
-                        is_z3 = False
-                        slv = "/home/vagrant/bin/optimathsat"
-                        self.run_solver(slv, inpf, modelf, errorf, is_z3)
+            # TODO: delete configurable
+            # TODO: prefix='tmp'[, dir=None
+            # TODO: move to shm
+            with tempfile.SpooledTemporaryFile() as modelf:
+                with tempfile.SpooledTemporaryFile() as errorf:
+                    self.run_solver(self.stream, modelf, errorf)
 
-            #decode
+            # decode
             raise NotImplementedError
             res = self.__solver.lower(h)
             logging.warning("SMT solver objective: %s" % res)
@@ -428,16 +442,84 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
 
     def encode_opt(self, opt, lbound=None, ubound=None):
         if opt:
-            if self.ghtd:
-                self.stream.write("(declare-const m Int)\n")
-            else:
-                self.stream.write("(declare-const m Real)\n")
             self.stream.write("(assert (>= m 1))\n")
             self.stream.write("(minimize m)\n")
             if ubound:
-                self.stream.write("(assert (<= m {ub}))\n".format(ub=ubound))
+                self.stream.write(f"(assert (<= m {ubound}))\n")
             if lbound:
-                self.stream.write("(assert (>= m {lb}))\n".format(lb=lbound))
+                self.stream.write(f"(assert (>= m {lbound}))\n")
+
+    def decode(self, output, is_z3, htd=False, repair=True):
+        ret = {"objective": "nan", "decomposition": None, "arcs": None, "ord": None, "weights": None}
+
+        model = {}
+
+        if not is_z3:
+            lines = re.findall('\(([^ ]*) ([a-zA-Z0-9]*)\)', output)
+
+            for nm, val in lines:
+                if val == "true":
+                    model[nm] = True
+                elif val == "false":
+                    model[nm] = False
+                else:
+                    model[nm] = int(val)
+        else:
+            lines = re.findall('\(define\-fun ([^ ]*) \(\) [a-zA-Z]*\s*([a-zA-Z0-9]*)\)', output)
+
+            for nm, val in lines:
+                if val == "true":
+                    model[nm] = True
+                elif val == "false":
+                    model[nm] = False
+                else:
+                    model[nm] = int(val)
+
+        try:
+            ordering = self._get_ordering(model)
+            weights = self._get_weights(model, ordering)
+            arcs = self._get_arcs(model)
+            # edges = self._get_edges(model) if htd else None
+            edges = None
+            bags = self._get_bags(model) if htd else None
+            # edges = None
+            # arcs = None
+            # edges = None
+
+            htdd = HypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
+                                                        weights=weights,
+                                                        checker_epsilon=self.__checker_epsilon, edges=edges, bags=bags,
+                                                        htd=htd, repair=repair)
+
+            # Debug, verify if the descendent relation is correct
+            # if htd:
+            #     desc = self._get_desc(model)
+            #     for n in htdd.tree.nodes:
+            #         actual = set(descendants(htdd.tree, n))
+            #         if len(desc[n]) != len(actual) or len(desc[n]-actual) > 0:
+            #             print("Failed on node {}, mismatch".format(n, desc[n] - actual))
+        #
+        # if htd:
+        #     eql = self._get_eq(model)
+        #
+        #     for i, j in eql.iteritems():
+        #         print "{}: {}".format(i, j)
+
+        # if htd:
+        #     ts = self._get_t(model)
+        #     for n in list(htdd.tree.nodes):
+        #         if not ts[n]:
+        #             #print n
+        #             htdd.tree.remove_node(n)
+
+        except KeyError:
+            raise ValueError("Could not parse output. In case of mode 2 may indicate unsat, otherwise check error log.")
+
+        # if not htd.validate(self.hypergraph):
+        #     raise RuntimeError("Found a GHTD that is not a HTD")
+
+        return DecompositionResult(htdd.width(), htdd, arcs, ordering, weights)
+
 
     def _get_weights(self, model, ordering):
         logging.info("Reconstruct weights")
@@ -471,21 +553,70 @@ class FractionalHypertreeDecomposition_OptiMathSAT(object):
         logging.debug("Weights = %s" % ret)
         return ret
 
-    def run_solver(self, slv, inpf, modelf, errorf, is_z3):
-        inpf.seek(0)
-        if is_z3:
-            p1 = subprocess.Popen([slv, '-smt2', '-in'], stdin=inpf, stdout=modelf, stderr=errorf)
-        else:
-            p1 = subprocess.Popen(slv, stdin=inpf, stdout=modelf, stderr=errorf, shell=True)
+    def run_solver(self, inp_stream, modelf, errorf):
+        # print(inp_stream.getvalue())
+        # exit(1)
 
-        p1.wait()
-        # Retrieve the result
-        modelf.seek(0)
+        solver_name = subprocess.check_output([self.solver_bin, "-version"]).decode()
+        logging.debug(f"Solver Name: {solver_name}")
+        solver_name = solver_name.split(' ')[0]
+        # p_solver = Popen(run_cmd, stdout=PIPE, stderr=PIPE, shell=True, close_fds=True, cwd=outdir)
+        # inpf.seek(0)
+        if 'z3' in solver_name:
+            p1 = subprocess.Popen([self.solver_bin, '-smt2', '-in'], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
+            is_z3 =True
+        elif 'MathSAT5' in solver_name:
+            p1 = subprocess.Popen([self.solver_bin], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
+            is_z3 = False
+        else:
+            logger.error(f"Unknown solver {solver_name}")
+            raise RuntimeError
+
+        p1.communicate(input=inp_stream.getvalue().encode())
         errorf.seek(0)
-        outp = modelf.read()
-        errp = errorf.read()
+        # if err != b'':
+        #     logging.error(err)
+        #     exit(1)
+        modelf.seek(0)
+        output = modelf.readlines()
+
+        stored_file = False
+        for line in output:
+            line = line.decode().split('\n')[0]
+            if line == 'success':
+                continue
+            if 'error' in line:
+                with tempfile.NamedTemporaryFile(delete=False) as inpf:
+                    inpf.write(inp_stream.getvalue().encode())
+                    logging.error(f"Solver reported an error. Encoding stored in {inpf.name}")
+
+            # print(line)
+
+
+
+        exit(1)
+        self.decode(output.decode(),is_z3=is_z3)
+
+        # # Load the resulting model
+        # try:
+        #     res = enc.decode(outp, False, htd=htd, repair=heuristic_repair)
+        # except ValueError as ee:
+        #     return None
+
+        exit(1)
+        # print(inpf.name)
+        # print(errorf.name)
+        # print(modelf.name)
+
+        # p1.wait()
+        # Retrieve the result
+        # modelf.seek(0)
+        # errorf.seek(0)
+        # outp = modelf.read()
+        # errp = errorf.read()
 
         if len(errp) > 0:
+            logging.error(errp)
             raise RuntimeError(errp)
 
         print(outp)

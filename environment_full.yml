@@ -6,6 +6,7 @@ channels:
   # cplex
   - ibmdecisionoptimization
 dependencies:
+  - python=3.7
   #mandatory: graph library
   - networkx>=2.2
   #TODO(jf): do we need this one?
@@ -17,4 +18,5 @@ dependencies:
   #optional: largest clique via asp
   - clingo
   # TODO: pymonad pip
+  #TODO: python3.7
   - cplex

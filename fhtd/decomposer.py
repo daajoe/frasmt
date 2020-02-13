@@ -16,7 +16,8 @@
 # copy of the GNU General Public License along with
 # fhtd.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import absolute_import
+from pathlib import Path
+import os
 
 import logging
 import time
@@ -26,12 +27,14 @@ from htd_validate.decompositions import fhtd
 from htd_validate.utils.hypergraph_primalview import Hypergraph, HypergraphPrimalView
 
 from fhtd.preprocessing import FractionalHyperTreeDecomposition_Preprocessor as Preprocessor
-from fhtd.smt import FractionalHypertreeDecomposition_OptiMathSAT
+from fhtd.smt import FractionalHypertreeDecompositionCommandline
 
 
 class FractionalHypertreeDecomposer:
     # suggested order [1], ..., [k]
-    def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False):
+    def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False,
+                 solver_bin=None):
+        self.__solver_bin = solver_bin
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
 
@@ -46,7 +49,7 @@ class FractionalHypertreeDecomposer:
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
               encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
-              FractionalHypertreeDecomposition=FractionalHypertreeDecomposition_OptiMathSAT):
+              FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
         pre_wall = time.time()
         if self.ghtd:
             run_preprocessing = False
@@ -86,9 +89,8 @@ class FractionalHypertreeDecomposer:
                 revert_nodes, revert_edges = self._pp.hgp.hg.relabel_consecutively()
                 logging.info("after relabeling: {0}, {1}".format(self._pp.hgp.hg.edges(), self._pp.hgp.hg.nodes()))
 
-                ftd = None
                 if len(self._pp.hgp.hg.edges()) == 0:
-                    ftd = fhtd.FractionalHypertreeDecomposition(epsilon=self.__checker_epsilon)
+                    ftd = FractionalHypertreeDecomposition(epsilon=self.__checker_epsilon, solver_bin=self.solver_bin)
                 else:
                     # TAKE CLIQUES HERE
                     clique = None
@@ -139,7 +141,7 @@ class FractionalHypertreeDecomposer:
                     z3_wall = time.time()
                     decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
                                                                   checker_epsilon=self.__checker_epsilon,
-                                                                  ghtd=self.ghtd)
+                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
                                            clique=clique, twins=twin_vertices, ubound=upper_bound)
                     ret['subsolvers'][solver_run_id] = {'width': res['objective'],

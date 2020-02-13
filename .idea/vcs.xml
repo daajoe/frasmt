@@ -2,6 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/clique/multithreadedmaximumclique" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/clique/pmc" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/htd_validate" vcs="Git" />
   </component>
 </project>

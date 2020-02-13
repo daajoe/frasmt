@@ -1,3 +1,3 @@
-from fhtd.smt.smt_OptiMathSAT import FractionalHypertreeDecomposition_OptiMathSAT
+from fhtd.smt.smt_cmd import FractionalHypertreeDecompositionCommandline
 # from fhtd.smt.smt_z3 import FractionalHypertreeDecomposition_z3
 #from smt_pysmt import FractionalHypertreeDecomposition_pysmt
