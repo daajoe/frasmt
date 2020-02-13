@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import logging
+import os
 import re
 import subprocess
 import tempfile
@@ -25,11 +26,10 @@ from decimal import Decimal
 # import htd_validate
 from io import StringIO
 from itertools import combinations
-import os
 
 # noinspection PyUnresolvedReferences
 from htd_validate.decompositions import FractionalHypertreeDecomposition
-
+from lib.htd_validate.htd_validate.decompositions import FractionalHypertreeDecomposition
 
 # TODO: make more general so that we can call multiple solvers
 class FractionalHypertreeDecompositionCommandline(object):
@@ -123,6 +123,10 @@ class FractionalHypertreeDecompositionCommandline(object):
 
     def add_cards(self, C):
         self.cards.append(C)
+
+    def literal(self, x):
+        logging.debug("Literal %s (var: %s)" % (x, self._vartab[abs(x)]))
+        return Not(self._vartab[abs(x)]) if x < 0 else self._vartab.get(x)
 
     def literal_str(self, x):
         if x < 0:
@@ -264,7 +268,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                     C.append(self.weight[i][e])
                     weights.append(f"weight_{i}_e{e}")
 
-                if len(weights)>1:
+                if len(weights) > 1:
                     self.stream.write(
                         "(assert (>= (+ {weights}) 1))\n".format(weights=" ".join(weights)))
                 elif len(weights) == 1:
@@ -335,16 +339,19 @@ class FractionalHypertreeDecompositionCommandline(object):
         pass
 
     def _get_ordering(self, model):
-        def cmp(i, j):
-            if i < j:
-                return -1 if model[self.literal(self.ord[i][j])] else 1
-            else:
-                return 1 if model[self.literal(self.ord[j][i])] else -1
-
         logging.info("Reconstruct Ordering")
+        ordering = []
+        for i in range(1, self.hypergraph.number_of_nodes() + 1):
+            pos = 0
+            for j in ordering:
+                # We know j is smaller due to range processing
+                if not model["ord_{}_{}".format(j, i)]:
+                    break
+                # Move current element one position forward
+                pos += 1
+            ordering.insert(pos, i)
 
-        ordering = range(1, self.hypergraph.number_of_nodes() + 1)
-        return sorted(ordering, cmp=cmp)
+        return ordering
 
     def solve(self, m=None, lbound=1, ubound=None, clique=None, twins=None):
         opt = False
@@ -449,7 +456,8 @@ class FractionalHypertreeDecompositionCommandline(object):
 
         model = {}
 
-        if not is_z3:
+        if is_z3:
+            raise NotImplementedError
             lines = re.findall('\(([^ ]*) ([a-zA-Z0-9]*)\)', output)
 
             for nm, val in lines:
@@ -460,39 +468,57 @@ class FractionalHypertreeDecompositionCommandline(object):
                 else:
                     model[nm] = int(val)
         else:
-            lines = re.findall('\(define\-fun ([^ ]*) \(\) [a-zA-Z]*\s*([a-zA-Z0-9]*)\)', output)
+            regex = re.compile(
+                '\s*\((?P<var>([a-zA-Z]+(|\_[0-9]+\_[a-zA-Z]*[0-9]+)))\s*(?P<val>(true|false|\(\/\s+[0-9]+ [0-9]+\s*\)|[0-9]+))\)\s*')
+            regex_real = re.compile("\(\/\s+(?P<num>([0-9]+))\s+(?P<den>([0-9]+))\)")
 
-            for nm, val in lines:
-                if val == "true":
-                    model[nm] = True
-                elif val == "false":
-                    model[nm] = False
-                else:
-                    model[nm] = int(val)
+            for line in output.split("\n"):
+                if line.startswith("( "):
+                    line = line[1:]
+                if line.endswith(" )"):
+                    line = line[:-1]
+                print(line)
+                m = regex.match(line)
+                if m:
+                    var, val = m.group("var"), m.group("val")
+                    logging.debug(f"var: {var} / val: {val}")
+                    if val == "true":
+                        model[var] = True
+                    elif val == "false":
+                        model[var] = False
+                    elif val.startswith("(/"):
+                        g = regex_real.match(val)
+                        num, den = g.group("num"), g.group("den")
+                        print(f"num: {num} den: {den}")
+                        model[var] = {'numerator': Decimal(g.group("num")), 'denominator': Decimal(g.group("den"))}
+                    else:
+                        model[var] = Decimal(val)
 
-        try:
-            ordering = self._get_ordering(model)
-            weights = self._get_weights(model, ordering)
-            arcs = self._get_arcs(model)
-            # edges = self._get_edges(model) if htd else None
-            edges = None
-            bags = self._get_bags(model) if htd else None
-            # edges = None
-            # arcs = None
-            # edges = None
 
-            htdd = HypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
-                                                        weights=weights,
-                                                        checker_epsilon=self.__checker_epsilon, edges=edges, bags=bags,
-                                                        htd=htd, repair=repair)
+        # try:
+        ordering = self._get_ordering(model)
+        weights = self._get_weights(model, ordering)
+        arcs = self._get_arcs(model)
+        # edges = self._get_edges(model) if htd else None
+        edges = None
+        bags = self._get_bags(model) if htd else None
+        # edges = None
+        # arcs = None
+        # edges = None
 
-            # Debug, verify if the descendent relation is correct
-            # if htd:
-            #     desc = self._get_desc(model)
-            #     for n in htdd.tree.nodes:
-            #         actual = set(descendants(htdd.tree, n))
-            #         if len(desc[n]) != len(actual) or len(desc[n]-actual) > 0:
-            #             print("Failed on node {}, mismatch".format(n, desc[n] - actual))
+        raise RuntimeError
+        htdd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
+                                                    weights=weights,
+                                                    checker_epsilon=self.__checker_epsilon, edges=edges, bags=bags,
+                                                    htd=htd, repair=repair)
+
+        # Debug, verify if the descendent relation is correct
+        # if htd:
+        #     desc = self._get_desc(model)
+        #     for n in htdd.tree.nodes:
+        #         actual = set(descendants(htdd.tree, n))
+        #         if len(desc[n]) != len(actual) or len(desc[n]-actual) > 0:
+        #             print("Failed on node {}, mismatch".format(n, desc[n] - actual))
         #
         # if htd:
         #     eql = self._get_eq(model)
@@ -507,59 +533,103 @@ class FractionalHypertreeDecompositionCommandline(object):
         #             #print n
         #             htdd.tree.remove_node(n)
 
-        except KeyError:
-            raise ValueError("Could not parse output. In case of mode 2 may indicate unsat, otherwise check error log.")
+        # except KeyError:
+        #     raise ValueError("Could not parse output. In case of mode 2 may indicate unsat, otherwise check error log.")
 
         # if not htd.validate(self.hypergraph):
         #     raise RuntimeError("Found a GHTD that is not a HTD")
 
         return DecompositionResult(htdd.width(), htdd, arcs, ordering, weights)
 
+    def _get_bags(self, model):
+        n = self.hypergraph.number_of_nodes()
+        ret = {}
+
+        for i in range(1, n+1):
+            ret[i] = {}
+            #ret[i][i] = True
+            for j in range(1, n+1):
+                #if i != j:
+                ret[i][j] = model["is_bag_{}_{}".format(i, j)]
+
+        return ret
 
     def _get_weights(self, model, ordering):
-        logging.info("Reconstruct weights")
         ret = {}
         n = self.hypergraph.number_of_nodes()
-        logging.debug(" Model = %s" % model)
+
         for i in range(1, n + 1):
             # print 'bag %i'
             ret[i] = {}
             for e in self.hypergraph.edges():
                 assert (e > 0)
+                ret[i][e] = model["weight_{}_e{}".format(i, e)]
                 val = model[self.literal(self.weight[i][e])]
-                # print self.literal(self.weight[i][e]), "vs", model[self.literal(self.weight[i][e])]
                 logging.debug(" Mod weight_{i}_e{j}={val}".format(i=i, j=e, val=val))
-                # print model
-                # print "Mod weight_{i}_e{j}={val}".format(i=i, j=e, val=val)
                 if self.ghtd:
                     ret[i][e] = val.as_long()
                 else:
-                    ret[i][e] = float(val.numerator_as_long()) / float(val.denominator_as_long())
-                # print dir(model[self._vartab.get(m)])
-                # print float(model[self._vartab.get(m)].numerator_as_long()) / float(model[self._vartab.get(m)].denominator_as_long())
-                # print "weight_{i}_e{j}={val} ".format(i=i, j=e, val=val),
-                # print val, " vs ", ret[i][e], val.numerator_as_long(), val.denominator_as_long()
+                    if isinstance(val, dict):
+                        ret[i][e] = val['numerator'] / val['denominator']
+                    else:
+                        ret[i][e] = val
+                    # ret[i][e] = float(val['numerator']) / float(val['denominator'])
 
         last_vertex = ordering[-1]
         incident_edges = self.hypergraph.incident_edges(last_vertex).keys()
         if len(incident_edges) == 0:
             raise TypeError("Fractional Hypertree Decompositions for graphs with isolated vertices.")
 
-        logging.debug("Weights = %s" % ret)
+        return ret
+
+    # def _get_weights(self, model, ordering):
+    #     logging.info("Reconstruct weights")
+    #     ret = {}
+    #     n = self.hypergraph.number_of_nodes()
+    #     logging.debug(" Model = %s" % model)
+    #     for i in range(1, n + 1):
+    #         # print 'bag %i'
+    #         ret[i] = {}
+    #         for e in self.hypergraph.edges():
+    #             assert (e > 0)
+    #             val = model[self.literal(self.weight[i][e])]
+    #             logging.debug(" Mod weight_{i}_e{j}={val}".format(i=i, j=e, val=val))
+    #             if self.ghtd:
+    #                 ret[i][e] = val.as_long()
+    #             else:
+    #                 ret[i][e] = float(val.numerator_as_long()) / float(val.denominator_as_long())
+    #
+    #     last_vertex = ordering[-1]
+    #     incident_edges = self.hypergraph.incident_edges(last_vertex).keys()
+    #     if len(incident_edges) == 0:
+    #         raise TypeError("Fractional Hypertree Decompositions for graphs with isolated vertices.")
+    #
+    #     logging.debug("Weights = %s" % ret)
+    #     return ret
+
+    def _get_arcs(self, model):
+        n = self.hypergraph.number_of_nodes()
+        ret = {}
+
+        for i in range(1, n+1):
+            ret[i] = {}
+            #ret[i][i] = True
+            for j in range(1, n+1):
+                if i != j:
+                    ret[i][j] = model["arc_{}_{}".format(i, j)]
+
         return ret
 
     def run_solver(self, inp_stream, modelf, errorf):
-        # print(inp_stream.getvalue())
-        # exit(1)
-
         solver_name = subprocess.check_output([self.solver_bin, "-version"]).decode()
         logging.debug(f"Solver Name: {solver_name}")
         solver_name = solver_name.split(' ')[0]
         # p_solver = Popen(run_cmd, stdout=PIPE, stderr=PIPE, shell=True, close_fds=True, cwd=outdir)
         # inpf.seek(0)
         if 'z3' in solver_name:
-            p1 = subprocess.Popen([self.solver_bin, '-smt2', '-in'], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
-            is_z3 =True
+            p1 = subprocess.Popen([self.solver_bin, '-smt2', '-in'], stdin=subprocess.PIPE, stdout=modelf,
+                                  stderr=errorf, shell=True)
+            is_z3 = True
         elif 'MathSAT5' in solver_name:
             p1 = subprocess.Popen([self.solver_bin], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
             is_z3 = False
@@ -573,21 +643,19 @@ class FractionalHypertreeDecompositionCommandline(object):
         #     logging.error(err)
         #     exit(1)
         modelf.seek(0)
-        output = modelf.readlines()
+        output = modelf.read().decode('utf8')
 
         stored_file = False
-        for line in output:
-            line = line.decode().split('\n')[0]
-            if line == 'success':
+        for line in output.split('\n'):
+            if 'success' in line:
                 continue
             if 'error' in line:
                 with tempfile.NamedTemporaryFile(delete=False) as inpf:
                     inpf.write(inp_stream.getvalue().encode())
                     logging.error(f"Solver reported an error. Encoding stored in {inpf.name}")
+                stored_file = True
+            # print(line)
 
-            print(line)
-
-
+        self.decode(output, is_z3=is_z3)
 
         exit(1)
-        self.decode(output.decode(),is_z3=is_z3)
