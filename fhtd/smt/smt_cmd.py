@@ -156,13 +156,13 @@ class FractionalHypertreeDecompositionCommandline(object):
             # logging.debug("Assertation %s" % f)
             # self.__solver.add(f)
             # set optimization variable or value for SAT check
+            if m is None:
+                m = 'm'
+                if self.ghtd:
+                    self.stream.write("(declare-const m Int)\n")
+                else:
+                    self.stream.write("(declare-const m Real)\n")
             if len(weights) > 1:
-                if m is None:
-                    m = 'm'
-                    if self.ghtd:
-                        self.stream.write("(declare-const m Int)\n")
-                    else:
-                        self.stream.write("(declare-const m Real)\n")
                 self.stream.write(
                     "(assert ( <= (+ {weights}) {m}))\n".format(weights=" ".join(weights), m=m))
             elif len(weights) == 1:
@@ -238,7 +238,6 @@ class FractionalHypertreeDecompositionCommandline(object):
                 if i == j:
                     continue
 
-                # TODO: add i>j
                 logging.debug(f"i={i}, j={j}")
                 logging.debug(f"edges: {self.hypergraph.edges()}")
 
@@ -250,14 +249,12 @@ class FractionalHypertreeDecompositionCommandline(object):
                     C.append(self.weight[i][e])
                     weights.append(f"weight_{i}_e{e}")
 
-                # TODO: continue HERE
-
-                # C = [self.literal(x) for x in C]
-                # f = Implies(self.literal(self.arc[i][j]), (Sum(C) >= 1.0))
-                # logging.debug(" Assertation %s" % f)
-                # self.__solver.add(f)
-                self.stream.write(
-                    "(assert (=> arc_{i}_{j} (>= (+ {weights}) 1)))\n".format(i=i, j=j, weights=" ".join(weights)))
+                if len(weights) > 1:
+                    self.stream.write(
+                        "(assert (=> arc_{i}_{j} (>= (+ {weights}) 1)))\n".format(i=i, j=j, weights=" ".join(weights)))
+                elif len(weights) == 1:
+                    self.stream.write(
+                        "(assert (=> arc_{i}_{j} (>= {weights} 1)))\n".format(i=i, j=j, weights=weights[0]))
 
                 # arc_ij then i most be covered by some edge (because i will end up in one bag)
                 weights = []
@@ -267,13 +264,11 @@ class FractionalHypertreeDecompositionCommandline(object):
                     C.append(self.weight[i][e])
                     weights.append(f"weight_{i}_e{e}")
 
-                # C = [self.literal(x) for x in C]
-                # f = (Sum(C) >= 1.0)
-                # logging.debug(" Assertation %s" % f)
-
-                # self.__solver.add(f)
-                self.stream.write(
-                    "(assert (>= (+ {weights}) 1))\n".format(weights=" ".join(weights)))
+                if len(weights)>1:
+                    self.stream.write(
+                        "(assert (>= (+ {weights}) 1))\n".format(weights=" ".join(weights)))
+                elif len(weights) == 1:
+                    self.stream.write("(assert (>= {} 1))\n".format(weights[0]))
         # assert (=> arc_ij  (>= (+ weight_j_e2 weight_j_e5 weight_j_e7 ) 1) )
 
     def break_clique(self, clique):
@@ -590,36 +585,9 @@ class FractionalHypertreeDecompositionCommandline(object):
                     inpf.write(inp_stream.getvalue().encode())
                     logging.error(f"Solver reported an error. Encoding stored in {inpf.name}")
 
-            # print(line)
+            print(line)
 
 
 
         exit(1)
         self.decode(output.decode(),is_z3=is_z3)
-
-        # # Load the resulting model
-        # try:
-        #     res = enc.decode(outp, False, htd=htd, repair=heuristic_repair)
-        # except ValueError as ee:
-        #     return None
-
-        exit(1)
-        # print(inpf.name)
-        # print(errorf.name)
-        # print(modelf.name)
-
-        # p1.wait()
-        # Retrieve the result
-        # modelf.seek(0)
-        # errorf.seek(0)
-        # outp = modelf.read()
-        # errp = errorf.read()
-
-        if len(errp) > 0:
-            logging.error(errp)
-            raise RuntimeError(errp)
-
-        print(outp)
-        print(errp)
-
-        raise NotImplementedError
