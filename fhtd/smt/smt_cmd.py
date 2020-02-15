@@ -30,6 +30,7 @@ from itertools import combinations
 # noinspection PyUnresolvedReferences
 from htd_validate.decompositions import FractionalHypertreeDecomposition
 from lib.htd_validate.htd_validate.decompositions import FractionalHypertreeDecomposition
+from fractions import Fraction
 
 # TODO: make more general so that we can call multiple solvers
 class FractionalHypertreeDecompositionCommandline(object):
@@ -39,6 +40,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             logging.error("Solver binary not given. Exiting...")
             raise RuntimeError
         else:
+            solver_bin = os.path.expanduser(solver_bin)
             if not os.path.isfile(solver_bin):
                 logging.error(f"File {solver_bin} does not exist. Exiting...")
                 exit(1)
@@ -63,7 +65,7 @@ class FractionalHypertreeDecompositionCommandline(object):
         self.stream = stream
         self.cards = []
         self.wprecision = wprecision
-        self.stream.write('(set-option :print-success true)\n(set-option :produce-models true)\n')
+        self.stream.write('(set-logic QF_LRA)\n(set-option :print-success true)\n(set-option :produce-models true)\n')
         self.ghtd = ghtd
 
     def prepare_vars(self):
@@ -378,8 +380,8 @@ class FractionalHypertreeDecompositionCommandline(object):
 
         if opt:
             self.encode_opt(opt, lbound=lbound, ubound=ubound)
-            # self.stream.write("(check-sat)\n(get-value (m))\n(get-objectives)\n")
-            self.stream.write("(check-sat)\n(get-model)\n")
+            self.stream.write("(check-sat)\n(get-value (m))\n(get-objectives)\n(get-model)\n")
+            # self.stream.write("(check-sat)\n(get-model)\n")
 
             # TODO: delete configurable
             # TODO: prefix='tmp'[, dir=None
@@ -455,29 +457,41 @@ class FractionalHypertreeDecompositionCommandline(object):
         ret = {"objective": "nan", "decomposition": None, "arcs": None, "ord": None, "weights": None}
 
         model = {}
+        regex_real = re.compile("\(\/\s+(?P<num>([0-9]+(\.[0-9]+)?))\s+(?P<den>([0-9]+(\.[0-9]+)?))\)")
 
         if is_z3:
-            raise NotImplementedError
-            lines = re.findall('\(([^ ]*) ([a-zA-Z0-9]*)\)', output)
+            for line in output.split('\n'):
+                if 'success' in line:
+                    continue
+                print(line)
+            lines = re.findall('\(define\-fun ([^ ]*) \(\) [a-zA-Z]*\s*(([a-zA-Z0-9]*(\.[0-9]+)?)|(\(\/\s+[0-9]+(\.[0-9]+)?\s+[0-9]+(\.[0-9]+)?\)))\)', output)
 
-            for nm, val in lines:
+            for var, val, _, _, _, _, _ in lines:
                 if val == "true":
-                    model[nm] = True
+                    model[var] = True
                 elif val == "false":
-                    model[nm] = False
+                    model[var] = False
+                elif val.startswith("(/"):
+                    g = regex_real.match(val)
+                    num, den = float(g.group("num")), float(g.group("den"))
+                    if not num.is_integer() or not den.is_integer():
+                        logging.error(f"Received a non-rational number as output. Value was: {val} num: {num} "
+                                      f"({num.is_integer()}) den: {den} ({den.is_integer()})")
+                        raise RuntimeError
+                    model[var] = Fraction(numerator=int(num), denominator=int(den))
                 else:
-                    model[nm] = int(val)
+                    model[var] = Fraction(val)
         else:
             regex = re.compile(
                 '\s*\((?P<var>([a-zA-Z]+(|\_[0-9]+\_[a-zA-Z]*[0-9]+)))\s*(?P<val>(true|false|\(\/\s+[0-9]+ [0-9]+\s*\)|[0-9]+))\)\s*')
-            regex_real = re.compile("\(\/\s+(?P<num>([0-9]+))\s+(?P<den>([0-9]+))\)")
 
             for line in output.split("\n"):
+                if 'success' in line:
+                    continue
                 if line.startswith("( "):
                     line = line[1:]
                 if line.endswith(" )"):
                     line = line[:-1]
-                print(line)
                 m = regex.match(line)
                 if m:
                     var, val = m.group("var"), m.group("val")
@@ -489,10 +503,10 @@ class FractionalHypertreeDecompositionCommandline(object):
                     elif val.startswith("(/"):
                         g = regex_real.match(val)
                         num, den = g.group("num"), g.group("den")
-                        print(f"num: {num} den: {den}")
-                        model[var] = {'numerator': Decimal(g.group("num")), 'denominator': Decimal(g.group("den"))}
+                        print(f"var/val: {var}={val} | num: {num} den: {den}")
+                        model[var] = Fraction(numerator=int(g.group("num")), denominator=int(g.group("den")))
                     else:
-                        model[var] = Decimal(val)
+                        model[var] = Fraction(val)
 
 
         # try:
@@ -500,17 +514,11 @@ class FractionalHypertreeDecompositionCommandline(object):
         weights = self._get_weights(model, ordering)
         arcs = self._get_arcs(model)
         # edges = self._get_edges(model) if htd else None
-        edges = None
-        bags = self._get_bags(model) if htd else None
-        # edges = None
-        # arcs = None
-        # edges = None
 
-        raise RuntimeError
         htdd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
                                                     weights=weights,
-                                                    checker_epsilon=self.__checker_epsilon, edges=edges, bags=bags,
-                                                    htd=htd, repair=repair)
+                                                    checker_epsilon=self.__checker_epsilon)
+        raise RuntimeError
 
         # Debug, verify if the descendent relation is correct
         # if htd:
@@ -541,18 +549,6 @@ class FractionalHypertreeDecompositionCommandline(object):
 
         return DecompositionResult(htdd.width(), htdd, arcs, ordering, weights)
 
-    def _get_bags(self, model):
-        n = self.hypergraph.number_of_nodes()
-        ret = {}
-
-        for i in range(1, n+1):
-            ret[i] = {}
-            #ret[i][i] = True
-            for j in range(1, n+1):
-                #if i != j:
-                ret[i][j] = model["is_bag_{}_{}".format(i, j)]
-
-        return ret
 
     def _get_weights(self, model, ordering):
         ret = {}
@@ -621,26 +617,30 @@ class FractionalHypertreeDecompositionCommandline(object):
         return ret
 
     def run_solver(self, inp_stream, modelf, errorf):
+        with open('myfile.txt', 'w') as myf:
+            myf.write(inp_stream.getvalue())
+
         solver_name = subprocess.check_output([self.solver_bin, "-version"]).decode()
-        logging.debug(f"Solver Name: {solver_name}")
+        logging.info(f"Solver Name: {solver_name}")
         solver_name = solver_name.split(' ')[0]
         # p_solver = Popen(run_cmd, stdout=PIPE, stderr=PIPE, shell=True, close_fds=True, cwd=outdir)
         # inpf.seek(0)
-        if 'z3' in solver_name:
+        if 'z3' in solver_name.lower():
             p1 = subprocess.Popen([self.solver_bin, '-smt2', '-in'], stdin=subprocess.PIPE, stdout=modelf,
-                                  stderr=errorf, shell=True)
+                                  stderr=errorf)
             is_z3 = True
         elif 'MathSAT5' in solver_name:
-            p1 = subprocess.Popen([self.solver_bin], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
+            p1 = subprocess.Popen([self.solver_bin, "-input=smt2", "-opt.theory.la.delta_pow=18"], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
             is_z3 = False
         else:
-            logger.error(f"Unknown solver {solver_name}")
+            logging.error(f"Unknown solver {solver_name}")
             raise RuntimeError
 
         p1.communicate(input=inp_stream.getvalue().encode())
         errorf.seek(0)
-        # if err != b'':
-        #     logging.error(err)
+        err = errorf.read().decode('utf8')
+        if err != '':
+            logging.error(err)
         #     exit(1)
         modelf.seek(0)
         output = modelf.read().decode('utf8')

@@ -20,3 +20,9 @@ dependencies:
   # TODO: pymonad pip
   #TODO: python3.7
   - cplex
+  #VIZ:
+  - matplotlib
+  - pygraphviz
+  #bugfix missing libgvplugin_pango.so.6
+  - xorg-libxrender
+  - xorg-libxpm
