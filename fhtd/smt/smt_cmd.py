@@ -47,6 +47,9 @@ class FractionalHypertreeDecompositionCommandline(object):
             if not os.access(solver_bin, os.X_OK):
                 logging.error(f"File {solver_bin} is not executable. Exiting...")
                 exit(1)
+            logging.info(f"===============================================================")
+            logging.info(f"Using solver {solver_bin}.")
+            logging.info(f"===============================================================")
             self.solver_bin = solver_bin
 
         if not checker_epsilon:

@@ -72,7 +72,8 @@ def is_valid_file(parser, arg):
 
 # available_local_solvers = [trellis.decomposer.Tamaki2016, trellis.decomposer.Tamaki2017, trellis.decomposer.Jdrasil2016,
 
-from fhtd.smt import FractionalHypertreeDecompositionCommandline
+from fhtd.smt import FractionalHypertreeDecomposition_z3
+# from fhtd.smt import FractionalHypertreeDecompositionCommandline
 
 
 def parse_args():
