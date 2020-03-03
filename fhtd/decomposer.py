@@ -89,8 +89,9 @@ class FractionalHypertreeDecomposer:
                 revert_nodes, revert_edges = self._pp.hgp.hg.relabel_consecutively()
                 logging.info("after relabeling: {0}, {1}".format(self._pp.hgp.hg.edges(), self._pp.hgp.hg.nodes()))
 
+                ftd = None
                 if len(self._pp.hgp.hg.edges()) == 0:
-                    ftd = FractionalHypertreeDecomposition(epsilon=self.__checker_epsilon, solver_bin=self.solver_bin)
+                    ftd = fhtd.FractionalHypertreeDecomposition(epsilon=self.__checker_epsilon)
                 else:
                     # TAKE CLIQUES HERE
                     clique = None
