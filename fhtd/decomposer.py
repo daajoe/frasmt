@@ -28,12 +28,14 @@ from htd_validate.utils.hypergraph_primalview import Hypergraph, HypergraphPrima
 
 from fhtd.preprocessing import FractionalHyperTreeDecomposition_Preprocessor as Preprocessor
 from fhtd.smt import FractionalHypertreeDecompositionCommandline
+from fhtd.smt import FractionalHypertreeDecomposition_z3
 
 
 class FractionalHypertreeDecomposer:
     # suggested order [1], ..., [k]
     def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False,
                  solver_bin=None):
+
         self.__solver_bin = solver_bin
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
@@ -49,7 +51,7 @@ class FractionalHypertreeDecomposer:
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
               encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
-              FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
+              FractionalHypertreeDecomposition=FractionalHypertreeDecomposition_z3):
         pre_wall = time.time()
         if self.ghtd:
             run_preprocessing = False

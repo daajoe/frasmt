@@ -73,7 +73,7 @@ def is_valid_file(parser, arg):
 # available_local_solvers = [trellis.decomposer.Tamaki2016, trellis.decomposer.Tamaki2017, trellis.decomposer.Jdrasil2016,
 
 from fhtd.smt import FractionalHypertreeDecomposition_z3
-# from fhtd.smt import FractionalHypertreeDecompositionCommandline
+from fhtd.smt import FractionalHypertreeDecompositionCommandline
 
 
 def parse_args():
@@ -100,8 +100,8 @@ def parse_args():
     parser.add_argument('-nsmt', '--disable_solving', dest='preprocessing_only', action='store_true', default=False,
                         help='Disable solving and exit right after preprocessing (just for technical purposes, e.g., '
                              'recording statistics for preprocessing).')
-    parser.add_argument('--smt_bin', dest='smt_bin', action='store', default="~/bin/z3",
-    # parser.add_argument('--smt_bin', dest='smt_bin', action='store', default="lib/optimathsat/optimathsat-1.6.3",
+    # parser.add_argument('--smt_bin', dest='smt_bin', action='store', default="/home/vagrant/miniconda3/bin/z3",
+    parser.add_argument('--smt_bin', dest='smt_bin', action='store', default="lib/optimathsat/optimathsat-1.6.3",
                         help='Allows to specify the path to the SMT binary. Default: lib/optimathsat/optimathsat-1.6.3.')
     parser.add_argument('-bo', '--bounds_only', dest='only_fhtd', action='store_true', default=False,
                         help='Output only the result. Do not compute an actual decomposition.')
@@ -171,7 +171,8 @@ def main():
         res = decomposer.solve(only_fhtw=only_fhtd, encode_cliques=encode_cliques,
                                encode_twins=encode_twins, clique_k=clique_k,
                                run_preprocessing=not no_pre, upper_bound=upper_bound,
-                               preprocessing_only=preprocessing_only)
+                               preprocessing_only=preprocessing_only,
+                               FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline)
         # set to True for fhtw only
         wall = time.time() - wall_start
         output.update({'width': res['objective'], 'subsolvers': res['subsolvers'], 'solved': 1,
