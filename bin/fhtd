@@ -175,7 +175,10 @@ def main():
                                FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline)
         # set to True for fhtw only
         wall = time.time() - wall_start
-        output.update({'width': res['objective'], 'subsolvers': res['subsolvers'], 'solved': 1,
+        output.update({'width': res['objective'].numerator/res['objective'].denominator,
+                       'width_fractional': {'numerator': res['objective'].numerator,
+                                            'denominator': res['objective'].denominator},
+                       'subsolvers': res['subsolvers'], 'solved': 1,
                        'solver_wall': wall, 'pre_wall': res['pre_wall'], 'enc_wall': res['enc_wall'],
                        'wall': wall, 'pre_clique_size': res['pre_clique_size'],
                        'pre_clique_k': res['pre_clique_k'], 'num_twins': res['pre_num_twins'],

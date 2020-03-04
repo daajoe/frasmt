@@ -53,8 +53,8 @@ class FractionalHypertreeDecompositionCommandline(object):
             self.solver_bin = solver_bin
 
         if not checker_epsilon:
-            checker_epsilon = Decimal(0.001)
-        self.__checker_epsilon = checker_epsilon
+            checker_epsilon = Fraction(0.001)
+        self.__checker_epsilon = Fraction(checker_epsilon)
         self.hypergraph = hypergraph
         self.num_vars = 0
         self.num_cls = 0
@@ -389,61 +389,13 @@ class FractionalHypertreeDecompositionCommandline(object):
             # TODO: move to shm
             with tempfile.SpooledTemporaryFile() as modelf:
                 with tempfile.SpooledTemporaryFile() as errorf:
-                    self.run_solver(self.stream, modelf, errorf)
-
-            # decode
-            raise NotImplementedError
-            res = self.__solver.lower(h)
-            logging.warning("SMT solver objective: %s" % res)
-            logging.warning("SMT solver objective(lower): %s" % res)
-
-            if str(res) == 'epsilon':
-                logging.warning("SMT solver returned confusing objective: %s" % res)
-                return ret
-            elif str(sat) == "unsat":
-                logging.warning("SMT solver returned unsat: %s" % res)
-                return ret
-
-            model = self.__solver.model()
-            logging.info("SMT Solver model=%s" % model)
-            ordering = self._get_ordering(model)
-            weights = self._get_weights(model, ordering)
-
-            logging.info("Computed ordering: %s" % ordering)
-
-            fhtd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
-                                                                  weights=weights,
-                                                                  checker_epsilon=self.__checker_epsilon)
-            # print fhtd
-            # encoding = str(self.__solver.statistics)
-
-            # TODO(jf): fixme
-            if isinstance(res, z3.IntNumRef):
-                rsx = Decimal(res.as_long())
-            else:
-                rsx = Decimal(res.numerator_as_long()) / Decimal(res.denominator_as_long())
-
-            if lbound == 1 and not rsx - self.__checker_epsilon <= fhtd.width() <= rsx + self.__checker_epsilon:
-                raise ValueError("fhtw should be {0}, but actually is {1}".format(rsx, fhtd.width()))
-            elif lbound > 1 and rsx + self.__checker_epsilon < fhtd.width():
-                raise ValueError("fhtw should be at most {0}, but actually is {1}".format(rsx, fhtd.width()))
-            stats = str(self.__solver.statistics())
-            regex = re.compile(r"\s*:(?P<group>[A-Za-z\-]+)\s+(?P<val>[0-9]+(\.[0-9]+)*)\s*$")
-            res_stats = {}
-            for line in stats.split("\n"):
-                if line[0] == "(":
-                    line = line[1:]
-                m = regex.match(line)
-                if m:
-                    res_stats[m.group("group")] = m.group("val")
-            ret.update({"objective": fhtd.width(), "decomposition": fhtd,
-                        "smt_solver_stats": res_stats, "smt_objective": str(res)})
+                    output, is_z3 = self.run_solver(self.stream, modelf, errorf, lbound)
+                    res = self.decode(output, is_z3=is_z3, lbound=lbound)
+                    ret.update(res)
             return ret
 
         else:
-            res = self.__solver.check()
-            logging.warning("SMT Solver result=%s" % res)
-            return {'sat': res}
+            raise NotImplementedError
 
     def encode_opt(self, opt, lbound=None, ubound=None):
         if opt:
@@ -454,7 +406,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             if lbound:
                 self.stream.write(f"(assert (>= m {lbound}))\n")
 
-    def decode(self, output, is_z3, htd=False, repair=True):
+    def decode(self, output, is_z3, lbound, htd=False, repair=True):
         ret = {"objective": "nan", "decomposition": None, "arcs": None, "ord": None, "weights": None}
 
         model = {}
@@ -504,7 +456,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                     elif val.startswith("(/"):
                         g = regex_real.match(val)
                         num, den = g.group("num"), g.group("den")
-                        print(f"var/val: {var}={val} | num: {num} den: {den}")
+                        logging.debug(f"var/val: {var}={val} | num: {num} den: {den}")
                         model[var] = Fraction(numerator=int(g.group("num")), denominator=int(g.group("den")))
                     else:
                         model[var] = Fraction(val)
@@ -515,35 +467,29 @@ class FractionalHypertreeDecompositionCommandline(object):
         weights = self._get_weights(model, ordering)
         arcs = self._get_arcs(model)
 
-        htdd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
+        fhtd = FractionalHypertreeDecomposition.from_ordering(hypergraph=self.hypergraph, ordering=ordering,
                                                     weights=weights,
                                                     checker_epsilon=self.__checker_epsilon)
-
-        #TODO: fixme
-        m = model["m"]
-        logging.error(m)
-        exit(1)
-
-        if isinstance(res, z3.IntNumRef):
-            rsx = Decimal(res.as_long())
-        else:
-            rsx = Decimal(res.numerator_as_long()) / Decimal(res.denominator_as_long())
+        rsx = model["m"]
 
         if lbound == 1 and not rsx - self.__checker_epsilon <= fhtd.width() <= rsx + self.__checker_epsilon:
             raise ValueError("fhtw should be {0}, but actually is {1}".format(rsx, fhtd.width()))
         elif lbound > 1 and rsx + self.__checker_epsilon < fhtd.width():
             raise ValueError("fhtw should be at most {0}, but actually is {1}".format(rsx, fhtd.width()))
-        stats = str(self.__solver.statistics())
-        regex = re.compile(r"\s*:(?P<group>[A-Za-z\-]+)\s+(?P<val>[0-9]+(\.[0-9]+)*)\s*$")
-        res_stats = {}
-        for line in stats.split("\n"):
-            if line[0] == "(":
-                line = line[1:]
-            m = regex.match(line)
-            if m:
-                res_stats[m.group("group")] = m.group("val")
-        ret.update({"objective": fhtd.width(), "decomposition": fhtd,
-                    "smt_solver_stats": res_stats, "smt_objective": str(res)})
+        #TODO: solver call statistics
+        # stats = str(self.__solver.statistics())
+        # regex = re.compile(r"\s*:(?P<group>[A-Za-z\-]+)\s+(?P<val>[0-9]+(\.[0-9]+)*)\s*$")
+        # res_stats = {}
+        # for line in stats.split("\n"):
+        #     if line[0] == "(":
+        #         line = line[1:]
+        #     m = regex.match(line)
+        #     if m:
+        #         res_stats[m.group("group")] = m.group("val")
+
+        #TODO: handle unsat
+        ret.update({"objective": fhtd.width(), "decomposition": fhtd, #"smt_solver_stats": res_stats,
+                    })
         return ret
         #
         # return DecompositionResult(htdd.width(), htdd, arcs, ordering, weights)
@@ -615,7 +561,7 @@ class FractionalHypertreeDecompositionCommandline(object):
 
         return ret
 
-    def run_solver(self, inp_stream, modelf, errorf):
+    def run_solver(self, inp_stream, modelf, errorf, lbound):
         with open('myfile.txt', 'w') as myf:
             myf.write(inp_stream.getvalue())
 
@@ -625,11 +571,11 @@ class FractionalHypertreeDecompositionCommandline(object):
         # p_solver = Popen(run_cmd, stdout=PIPE, stderr=PIPE, shell=True, close_fds=True, cwd=outdir)
         # inpf.seek(0)
         if 'z3' in solver_name.lower():
-            p1 = subprocess.Popen([self.solver_bin, '-smt2', '-in'], stdin=subprocess.PIPE, stdout=modelf,
+            p1 = subprocess.Popen([self.solver_bin, '-st','-smt2', '-in'], stdin=subprocess.PIPE, stdout=modelf,
                                   stderr=errorf)
             is_z3 = True
         elif 'MathSAT5' in solver_name:
-            p1 = subprocess.Popen([self.solver_bin, "-input=smt2", "-opt.theory.la.delta_pow=18"], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
+            p1 = subprocess.Popen([self.solver_bin, '-stats', "-verbosity=2","-input=smt2", "-opt.theory.la.delta_pow=18"], stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
             is_z3 = False
         else:
             logging.error(f"Unknown solver {solver_name}")
@@ -654,7 +600,5 @@ class FractionalHypertreeDecompositionCommandline(object):
                     logging.error(f"Solver reported an error. Encoding stored in {inpf.name}")
                 stored_file = True
             # print(line)
-
-        self.decode(output, is_z3=is_z3)
-
-        exit(1)
+        #TODO: statistics
+        return output, is_z3

@@ -147,9 +147,11 @@ class FractionalHypertreeDecomposer:
                                                                   ghtd=self.ghtd, solver_bin=self.__solver_bin)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
                                            clique=clique, twins=twin_vertices, ubound=upper_bound)
-                    ret['subsolvers'][solver_run_id] = {'width': res['objective'],
+                    ret['subsolvers'][solver_run_id] = {'width': res['objective'].numerator/res['objective'].denominator,
+                                                        'width_fractional': {'numerator': res['objective'].numerator,
+                                                                             'denominator': res['objective'].denominator},
                                                         'decomposition': res['decomposition'],
-                                                        'smt_solver_stats': res['smt_solver_stats'],
+                                                        # 'smt_solver_stats': res['smt_solver_stats'],
                                                         'z3_wall': time.time() - z3_wall,
                                                         'enc_wall': res['enc_wall']}
                     solver_run_id += 1
