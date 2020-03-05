@@ -416,7 +416,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             for line in output.split('\n'):
                 if 'success' in line:
                     continue
-                print(line)
+                # print(line)
             lines = re.findall('\(define\-fun ([^ ]*) \(\) [a-zA-Z]*\s*(([a-zA-Z0-9]*(\.[0-9]+)?)|(\(\/\s+[0-9]+(\.[0-9]+)?\s+[0-9]+(\.[0-9]+)?\)))\)', output)
 
             for var, val, _, _, _, _, _ in lines:

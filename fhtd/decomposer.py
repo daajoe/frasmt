@@ -28,7 +28,7 @@ from htd_validate.utils.hypergraph_primalview import Hypergraph, HypergraphPrima
 
 from fhtd.preprocessing import FractionalHyperTreeDecomposition_Preprocessor as Preprocessor
 from fhtd.smt import FractionalHypertreeDecompositionCommandline
-#from fhtd.smt import FractionalHypertreeDecomposition_z3
+# from fhtd.smt import FractionalHypertreeDecomposition_z3
 
 
 class FractionalHypertreeDecomposer:
