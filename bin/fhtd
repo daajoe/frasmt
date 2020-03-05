@@ -102,8 +102,11 @@ def parse_args():
                         help='Disable solving and exit right after preprocessing (just for technical purposes, e.g., '
                              'recording statistics for preprocessing).')
     # parser.add_argument('--smt_bin', dest='smt_bin', action='store', default="/home/vagrant/miniconda3/bin/z3",
-    parser.add_argument('--smt_bin', dest='smt_bin', action='store', default="lib/optimathsat/optimathsat-1.6.3",
+    parser.add_argument('-s', '--smt_bin', dest='smt_bin', action='store', default="lib/optimathsat/optimathsat-1.6.3",
                         help='Allows to specify the path to the SMT binary. Default: lib/optimathsat/optimathsat-1.6.3.')
+    parser.add_argument('-sp', '--smt_bin_plus', dest='smt_bin_plus', action='store',
+                        help='Allows to specify the path to the SMT binary. Use plus instead of "/". '
+                             'Default: lib/optimathsat/optimathsat-1.6.3.')
     parser.add_argument('-bo', '--bounds_only', dest='only_fhtd', action='store_true', default=False,
                         help='Output only the result. Do not compute an actual decomposition.')
     parser.add_argument('-ub', '--upper_bound', dest='upper_bound', default=None, type=lambda x: int(x),
@@ -143,8 +146,14 @@ def main():
     upper_bound = args.upper_bound
     ghtd = args.ghtd
     preprocessing_only = args.preprocessing_only
-    smt_bin = os.path.expanduser(args.smt_bin)
-    #use relative path
+    if args.smt_bin!="lib/optimathsat/optimathsat-1.6.3" and args.smt_bin_plus is not None:
+        logging.error("Use either -s or -sp for the smt solver. Not both. Exiting...")
+        exit(5)
+    if args.smt_bin_plus is not None:
+        smt_bin = os.path.expanduser(args.smt_bin_plus.replace("+", "/"))
+    else:
+        smt_bin = os.path.expanduser(args.smt_bin)
+
     if not smt_bin.startswith("/"):
         smt_bin=pathlib.Path(__file__).parent.parent.absolute().joinpath(smt_bin)
         if not (os.path.isfile(smt_bin) and os.access(smt_bin, os.X_OK)):
