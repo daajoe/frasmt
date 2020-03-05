@@ -118,7 +118,10 @@ def parse_args():
                             help='Due missing arbitary precision within solvers we might run into rounding issues. '
                                  'Therefore, we allow here to specify an additive precision offset (for the checker). '
                                  'Default value = 0.001', default=Decimal(0.001))
-    parser.add_argument('-i', '--info', dest='info', action='store_true',
+    parser.add_argument('-i', '--original_input', dest='original_input', default=None,
+                        help='Provides the path to the original input instance if the instance given with "-f" was'
+                             'an extracted instance in a temporary path (use for cluster tools only).')
+    parser.add_argument('-is', '--instance_stats', dest='info', action='store_true',
                         help='Prints basic information about the instance and exits.', default=False)
 
     parser.add_argument('--runid', dest='run', action='store', type=int,
@@ -199,6 +202,10 @@ def main():
                        'wall': wall, 'pre_clique_size': res['pre_clique_size'],
                        'pre_clique_k': res['pre_clique_k'], 'num_twins': res['pre_num_twins'],
                        'pre_size_max_twin': res['pre_size_max_twin']})
+
+        if args.original_input is not None:
+            output.update({"instance_path": args.original_input, "instance_path_temp": args.instance})
+
         logging.warning("Runtime was %s." % wall)
         # TDs are sometimes not json serializable to we really want to remove them
         z3_wall = 0
