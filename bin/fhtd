@@ -27,6 +27,7 @@ import sys
 import time
 from decimal import Decimal
 from io import StringIO
+import pathlib
 
 # TODO:
 # import git
@@ -142,7 +143,13 @@ def main():
     upper_bound = args.upper_bound
     ghtd = args.ghtd
     preprocessing_only = args.preprocessing_only
-    smt_bin = args.smt_bin
+    smt_bin = os.path.expanduser(args.smt_bin)
+    #use relative path
+    if not smt_bin.startswith("/"):
+        smt_bin=pathlib.Path(__file__).parent.parent.absolute().joinpath(smt_bin)
+        if not (os.path.isfile(smt_bin) and os.access(smt_bin, os.X_OK)):
+            logging.error(f"SMT solver bin not found or not executable. At {smt_bin}. Exiting...")
+            exit(5)
 
     # pgraph_view = HypergraphPrimalView(hypergraph=hypergraph)
     # td_stream = StringIO()
