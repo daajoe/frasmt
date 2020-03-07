@@ -34,8 +34,9 @@ from fhtd.smt import FractionalHypertreeDecompositionCommandline
 class FractionalHypertreeDecomposer:
     # suggested order [1], ..., [k]
     def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False,
-                 solver_bin=None):
+                 solver_bin=None, odebug=None):
 
+        self.odebug = odebug
         self.__solver_bin = solver_bin
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
@@ -144,7 +145,8 @@ class FractionalHypertreeDecomposer:
                     z3_wall = time.time()
                     decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
                                                                   checker_epsilon=self.__checker_epsilon,
-                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin)
+                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin,
+                                                                  odebug=self.odebug)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
                                            clique=clique, twins=twin_vertices, ubound=upper_bound)
                     ret['subsolvers'][solver_run_id] = {'width': res['objective'].numerator/res['objective'].denominator,

@@ -37,7 +37,8 @@ from z3 import Or, Not, Sum, Implies
 
 class FractionalHypertreeDecomposition_z3(object):
     def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False,
-                 solver_bin=None):
+                 solver_bin=None, debug=False):
+        self.debug = debug
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
         self.__checker_epsilon = checker_epsilon
@@ -409,9 +410,9 @@ class FractionalHypertreeDecomposition_z3(object):
             # self.__solver.add(z3.OptimizeObjective(z3.OptimizeObj,m,ubound))
             # TODO: fix for lower bound
             self.stream.write('foobar')
-
-            with open('tmp_out.txt', 'w') as f:
-                f.write(self.stream.getvalue())
+            if self._debug:
+                with open('tmp_out.txt', 'w') as f:
+                    f.write(self.stream.getvalue())
 
             res = self.__solver.lower(h)
             logging.warning("SMT solver objective: %s" % res)

@@ -125,6 +125,10 @@ def parse_args():
                              'an extracted instance in a temporary path (use for cluster tools only).')
     parser.add_argument('-is', '--instance_stats', dest='info', action='store_true',
                         help='Prints basic information about the instance and exits.', default=False)
+    parser.add_argument('-d', '--debug', dest='debug', action='store_true',
+                        help='Outputs smt debug encodings.', default=False)
+    parser.add_argument('-o', '--output_debug', dest='odebug',
+                        help='Place for the output debug.', default=None)
 
     parser.add_argument('--runid', dest='run', action='store', type=int,
                         help='ignored')
@@ -150,6 +154,8 @@ def main():
     only_fhtd = args.only_fhtd
     upper_bound = args.upper_bound
     ghtd = args.ghtd
+    debug = args.debug
+    odebug = args.odebug
     preprocessing_only = args.preprocessing_only
     if args.smt_bin!="lib/optimathsat/optimathsat-1.6.3" and args.smt_bin_plus is not None:
         logging.error("Use either -s or -sp for the smt solver. Not both. Exiting...")
@@ -186,7 +192,7 @@ def main():
     # x.write(self.stream.getvalue())
 
     decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon,
-                                               ghtd=ghtd, solver_bin=smt_bin)
+                                               ghtd=ghtd, solver_bin=smt_bin, odebug=odebug)
 
     try:
         res = decomposer.solve(only_fhtw=only_fhtd, encode_cliques=encode_cliques,
