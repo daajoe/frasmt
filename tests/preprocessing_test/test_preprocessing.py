@@ -47,7 +47,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         self.assertIsNotNone(hg)
         pp = d.FractionalHypertreeDecomposer(hg)
         #pp = p.FractionalHyperTreeDecomposition_Preprocessor(hgpv.HypergraphPrimalView(hg))
-        self.assertEquals([set(xrange(1, 14))],
+        self.assertEquals([set(range(1, 14))],
                           [x for x in pp._pp.hgp.biconnected_components()])
 
         pp.solve()
@@ -98,7 +98,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         hg.add_hyperedge((53, 2, 9))
         hg.add_hyperedge((83, 12, 9))
         # print ([x for x in pp.hgp.biconnected_components()])
-        rn13 = set(xrange(1, 14))
+        rn13 = set(range(1, 14))
         rn13.update([83, 53, 22, 29])
         self.assertEquals([set([43, 13]), set([9, 33]), rn13],
                           # set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 83, 53, 22, 29])],
@@ -129,7 +129,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         hg.add_hyperedge((53, 2, 9))
         hg.add_hyperedge((83, 12, 9))
         # print ([x for x in pp.hgp.biconnected_components()])
-        rn13 = set(xrange(1, 14))
+        rn13 = set(range(1, 14))
         rn13.update([83, 53, 22, 29])
         self.assertEquals([set([43, 13]), set([9, 33]), rn13],
                           # set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 83, 53, 22, 29])],
@@ -234,7 +234,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         self.assertTrue(pp.simplicial_primalgraph(clique_prevent_he_up_to=5))
         self.assertEquals(2, len(pp.hgp))
         self.assertEquals(1, len(pp.hgp.hg.edges()))
-        self.assertEquals(list(pp.hgp.hg.edges().values()[0]), list(pp.hgp.hg.nodes_iter()))
+        self.assertEquals(list(tuple(pp.hgp.hg.edges().values())[0]), list(pp.hgp.hg.nodes()))
 
         hg = self.loadFile(self.filePath("testHG/") + "C4+.edge")
         self.assertIsNotNone(hg)

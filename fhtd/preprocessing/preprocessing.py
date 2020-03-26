@@ -148,7 +148,7 @@ class FractionalHyperTreeDecomposition_Preprocessor:
             # print n, dd
             if dd == 2:
                 adj = self.__hgp.hg.edge_rank(n)
-                assert (len(adj) <= 2)
+                assert (len(tuple(adj)) <= 2)
                 ngb_cand = set()
                 ngb_edge = None
                 edge_cand = None

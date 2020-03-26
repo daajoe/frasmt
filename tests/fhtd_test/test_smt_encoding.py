@@ -17,7 +17,7 @@ if src_path not in sys.path:
     for lib in libs:
         sys.path.insert(0, os.path.join(src_path, lib))
 
-from cStringIO import StringIO
+from io import StringIO
 import htd_validate.utils.hypergraph
 import htd_validate.utils.hypergraph_primalview as hgpv
 import htd_validate_tests.tests.utils.validateGraph_testcase as vtd
@@ -43,7 +43,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         path = os.path.join(os.path.realpath(os.path.dirname(__file__)), "../graphs/")
         files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith('.hg')]
         for file in files:
-            print "INSTANCE %s" % file
+            print("INSTANCE %s" % file)
             opt = os.path.splitext(os.path.basename(file))[0]
             exp_width = None
             with open(os.path.join(path, "%s.opt" % opt)) as f:
