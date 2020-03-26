@@ -145,15 +145,14 @@ class FractionalHyperTreeDecomposition_Preprocessor:
             return False
         edge_contr = []
         for n, dd, _ in self.__hgp.hyper_degree_iter():
-            # print n, dd
             if dd == 2:
-                adj = self.__hgp.hg.edge_rank(n)
-                assert (len(tuple(adj)) <= 2)
+                adj = tuple(self.__hgp.hg.edge_rank(n))
+                assert (len(adj) <= 2)
                 ngb_cand = set()
                 ngb_edge = None
                 edge_cand = None
-                # print "ADJ:", adj
                 for (e, r) in adj:
+                    #print(e,r)
                     if r > contract_up_to_rank or e not in map(lambda x: x[0], edge_contr):
                         # either we have a small rank (or both adjacent vertice have and edge_cand to be contracted not set)
                         if r <= contract_up_to_rank and edge_cand is None:

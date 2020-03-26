@@ -165,12 +165,12 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         self.assertTrue(pp.almost_simplicial_hypergraph(edge_contr=True))
         self.assertEquals(4, len(pp.hgp))
         self.assertEquals(1, len(pp.hgp.hg.edges()))
-        self.assertEquals(list(pp.hgp.hg.edges().values()[0]), list(pp.hgp.hg.nodes_iter()))
+        self.assertEquals(list(tuple(pp.hgp.hg.edges().values())[0]), list(pp.hgp.hg.nodes_iter()))
 
         self.assertFalse(pp.almost_simplicial_hypergraph(edge_contr=True))
         self.assertEquals(4, len(pp.hgp))
         self.assertEquals(1, len(pp.hgp.hg.edges()))
-        self.assertEquals(list(pp.hgp.hg.edges().values()[0]), list(pp.hgp.hg.nodes_iter()))
+        self.assertEquals(list(tuple(pp.hgp.hg.edges().values())[0]), list(pp.hgp.hg.nodes_iter()))
         print(pp.hgp.hg.edges())
 
     def testAlmostSimplicialPrimal(self):
