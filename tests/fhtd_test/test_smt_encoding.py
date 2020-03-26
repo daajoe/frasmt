@@ -22,7 +22,8 @@ import htd_validate.utils.hypergraph
 import htd_validate.utils.hypergraph_primalview as hgpv
 import htd_validate_tests.tests.utils.validateGraph_testcase as vtd
 
-from fhtd.smt import FractionalHypertreeDecomposition_z3 as FractionalHypertreeDecomposition
+#from fhtd.smt import FractionalHypertreeDecomposition_z3 as FractionalHypertreeDecomposition
+from fhtd.smt import FractionalHypertreeDecompositionCommandline as FractionalHypertreeDecomposition
 
 
 class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
