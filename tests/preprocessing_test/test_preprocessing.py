@@ -145,7 +145,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         self.assertEquals(13, hg.number_of_nodes())
         pp = d.FractionalHypertreeDecomposer(hg)
         pp.twin_vertices()
-        self.assertEquals([range(1, 14)],
+        self.assertEquals([list(range(1, 14))],
                           # [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
                           sorted(x for x in pp._pp.hgp.iter_twin_vertices()))
 
