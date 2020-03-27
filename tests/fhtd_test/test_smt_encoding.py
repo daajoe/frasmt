@@ -40,7 +40,8 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         pass
 
     def testEncoding(self):
-        #return
+        excluded = {'Kakuro-medium-159-ext.xml.hg': 'high mem consumption >2G', 'Pi-40-10-07948-40-57.xml.hg': 'long runtime >10m'}
+
         from os import listdir
         from os.path import isfile, join
 
@@ -48,6 +49,9 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         files = [f for f in listdir(path) if isfile(join(path, f)) and f.endswith('.hg')]
         for file in files:
             print("INSTANCE %s" % file)
+            if file in excluded:
+                print(f" ... was excluded... because of '{excluded[file]}'\n ... continuing...")
+                continue
             opt = os.path.splitext(os.path.basename(file))[0]
             exp_width = None
             with open(os.path.join(path, "%s.opt" % opt)) as f:
@@ -57,7 +61,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
 
             stream = StringIO()
             smt_bin = '../lib/z3-4.8.7-x64-ubuntu-16.04/bin/z3'
-            smt_bin = '/home/vagrant/src/frasmt/lib/optimathsat/optimathsat-1.6.3'
+            # smt_bin = '../lib/optimathsat/optimathsat-1.6.3'
 
             # decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon,
             #                                            ghtd=False, solver_bin=smt_bin, odebug=None)
