@@ -59,6 +59,12 @@ pysmt optimization open PR: https://github.com/pysmt/pysmt/pull/439
 https://www.ibm.com/support/knowledgecenter/es/SSSA5P_12.6.1/ilog.odms.studio.help/Optimization_Studio/topics/COS_installing.html
 https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.0/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html
 
+- Install Anaconda cplex from https://anaconda.org/IBMDecisionOptimization/cplex
+- Download cplex (IBM Academic Initative)
+  - Install it into your home (/home/myhome/cplex_1210)
+  - Install python into local site packages somewhere (not into anaconda directory; https://or.stackexchange.com/questions/3114/python-does-not-identify-the-academic-version-of-cplex)
+  - cp ~/cplex_1210/cplex/python/3.7/x86-64_linux/cplex/_internal/py37_cplex12100.so ~/anaconda3/envs/rb/lib/python3.7/site-packages/cplex/_internal/py37_cplex12100.so
+
 ## Test it
 ```bash
 bin/fhtd -f tests/graphs/easy/c4.hg 
