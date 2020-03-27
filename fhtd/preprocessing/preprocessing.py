@@ -284,7 +284,7 @@ class FractionalHyperTreeDecomposition_Preprocessor:
                         if not self.clique_finished(cl, contr[0]):
                             # print ngb, k, ngbs
                             # print ngb
-                            m = map(lambda x: x[0], edge_contr)
+                            m = list(map(lambda x: x[0], edge_contr))
                             if contr not in m and (contr[1], contr[0]) not in m:
                                 edge_contr.append((contr, k, ngbs, fhec + 1))  # TODO: weight function
                             # self.__hgp.hg.contract_edge([k, ngbs[0]])

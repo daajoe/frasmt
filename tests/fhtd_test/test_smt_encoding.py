@@ -4,6 +4,8 @@ from __future__ import absolute_import
 import os
 import sys
 import inspect
+from decimal import Decimal
+
 
 # TODO: fixme
 src_path = os.path.abspath(os.path.realpath(inspect.getfile(inspect.currentframe())))
@@ -22,7 +24,8 @@ import htd_validate.utils.hypergraph
 import htd_validate.utils.hypergraph_primalview as hgpv
 import htd_validate_tests.tests.utils.validateGraph_testcase as vtd
 
-#from fhtd.smt import FractionalHypertreeDecomposition_z3 as FractionalHypertreeDecomposition
+from fhtd import FractionalHypertreeDecomposer
+# from fhtd.smt import FractionalHypertreeDecomposition_z3 as FractionalHypertreeDecomposition
 from fhtd.smt import FractionalHypertreeDecompositionCommandline as FractionalHypertreeDecomposition
 
 
@@ -53,7 +56,17 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
             hypergraph = htd_validate.Hypergraph.from_file(fname, fischl_format=True)
 
             stream = StringIO()
-            decomposer = FractionalHypertreeDecomposition(hypergraph, timeout=20, stream=stream)
+            smt_bin = '../lib/z3-4.8.7-x64-ubuntu-16.04/bin/z3'
+            smt_bin = '/home/vagrant/src/frasmt/lib/optimathsat/optimathsat-1.6.3'
+
+            # decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon,
+            #                                            ghtd=False, solver_bin=smt_bin, odebug=None)
+
+            decomposer = FractionalHypertreeDecomposition(hypergraph, timeout=20, stream=stream,
+                                                          solver_bin=smt_bin,
+                                                          checker_epsilon=None,
+                                                          ghtd=False, odebug=None
+                                                          )
             res = decomposer.solve()
             width = res['objective']
 

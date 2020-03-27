@@ -84,7 +84,7 @@ class GraphSatTw(object):
     def add_clause(self, C):
         # C = map(neg, C)
         # self.backend.add_rule(head=[], body=C, choice=False)
-        self.stream.write("%s 0\n" %" ".join(map(str,C)))
+        self.stream.write("%s 0\n" %" ".join(list(map(str,C))))
         self.num_cls += 1
 
     def add_cards(self, C):
@@ -92,7 +92,7 @@ class GraphSatTw(object):
 
     def add_at_most(self, C, m):
         # self.backend.add_weight_rule(head=[], lower=m + 1, body=[(x, 1) for x in C], choice=False)
-        self.stream.write("%s <= %i 0\n" % (" ".join(map(lambda x: str(int(x)),C)),m))
+        self.stream.write("%s <= %i 0\n" % (" ".join(list(map(lambda x: str(int(x)),C)),m)))
 
     def add_bin_at_most_(self, C, curr, k, pos):
         # subset complete cls
