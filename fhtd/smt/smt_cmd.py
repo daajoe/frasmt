@@ -361,8 +361,8 @@ class FractionalHypertreeDecompositionCommandline(object):
     def topsort(self, clique=None, topsort=1):
         assert(topsort >= 1)
         n = self.hypergraph.number_of_nodes()
-        m = self.hypergraph.number_of_edges()
-        # only one last allowed
+        #m = self.hypergraph.number_of_edges()
+        # only one last(i) allowed
         for i in range(1,n+1):
             for j in range(i+1,n+1):
                 self.add_clause([-self.last[i], -self.last[j]])
@@ -387,11 +387,12 @@ class FractionalHypertreeDecompositionCommandline(object):
                 for j in range(1,n+1):
                     for w in range(1, n + 1):
                         if i != j and i != w and w != j: # self.top_ord_rev[w] < self.top_ord_rev[j]:
-                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord[w][j], -self.smallest[u][j]])
+                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord[w][j], -self.smallest[i][j]])
         else:
             for i in range(1,n+1):
                 for j in self.hypergraph.adjByNode(i):
                     for w in self.hypergraph.adjByNode(i):
+                        assert(i != j and i != w)
                         if j != w:
                             self.add_clause([-self.ord[w][j], -self.smallest[i][j]])
 
@@ -399,7 +400,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             for j in range(1,n+1):
                 for w in range(1,n+1):
                     if self.top_ord_rev(i) < self.top_ord_rev(j) and i != w and j != w:
-                        self.add_clause([-self.ord[w,i], self.smallest[i][w]])
+                        self.add_clause([-self.ord[w][i], self.smallest[i][w]])
 
 
     def configration(self):
