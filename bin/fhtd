@@ -28,6 +28,7 @@ import time
 from decimal import Decimal
 from io import StringIO
 import pathlib
+import random
 
 from fractions import Fraction
 
@@ -91,6 +92,8 @@ def parse_args():
                             help='instance')
     parser.add_argument('-t', '--tmp-file', dest='tmp', action='store', type=lambda x: os.path.realpath(x),
                         help='ignored')
+    parser.add_argument('-x', '--seed', dest='seed', action='store', type=lambda x: int(x), default=0,
+                        help='Seed for permutations used internally during encoding')
     parser.add_argument('-ck', '--clique_k', dest='clique_k', action='store', type=lambda x: int(x), default=4,
                         help='Threshold for relaxed clique computation (ideal clique = 3). [default=4],'
                              '1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
@@ -148,6 +151,7 @@ def main():
     version = subprocess.check_output(["git", "describe", "--always"]).strip().decode('utf-8')
 
     args = parse_args()
+    seed = args.seed
     fname = args.instance
     epsilon = args.epsilon
     encode_cliques = args.encode_cliques
@@ -162,6 +166,7 @@ def main():
     debug = args.debug
     odebug = args.odebug
     preprocessing_only = args.preprocessing_only
+    random.seed(seed)
     if args.smt_bin!="lib/optimathsat/optimathsat-1.6.3" and args.smt_bin_plus is not None:
         logging.error("Use either -s or -sp for the smt solver. Not both. Exiting...")
         exit(5)
