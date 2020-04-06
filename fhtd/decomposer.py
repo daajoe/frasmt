@@ -143,8 +143,8 @@ class FractionalHypertreeDecomposer:
 
                         # use clique_k for computing k-hypercliques
                         clique_k = max(3, clique_k)
-                        clique_list = self._pp.hpg.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self,_pp.hpg.hg, clique_k), \
-                                                                clingoctl=None, timeout=600)
+                        clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
+                                                                clingoctl=None, timeout=600)[2]
                         if len(clique_list) > 0:
                             clique = clique_list[0]
                         pre_clique_size = len(clique_list)
@@ -156,7 +156,7 @@ class FractionalHypertreeDecomposer:
                         logging.info("Computed Symmetry Clique follows.")
                         logging.info(clique)
                         ret['pre_clique_sym_size'].append(pre_clique_size)
-                        ret['pre_clique_sym_k'].append(clique_k_sym)
+                        ret['pre_clique_k_sym'].append(clique_k_sym)
 
                     twin_vertices = None
                     if encode_twins:
