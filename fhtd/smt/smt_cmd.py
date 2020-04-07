@@ -143,6 +143,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             self.last = []
             for i in range(1, n+1):
                 self.last[i] = self.add_var(name=f'last_{i}')
+                self.stream.write(f"(declare-const last_{i} Bool)\n")
 
             self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
             self.smallest = [[]]
@@ -154,6 +155,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                     # (declare-const ord_ij Bool)
                     self.smallest[i].append(None)
                     self.smallest[i][j] = self.add_var(name=f'smallest_{i}_{j}')
+                    self.stream.write(f"(declare-const smallest_{i}_{j} Bool)\n")
 
     # z3.Real
     def add_var(self, name):
