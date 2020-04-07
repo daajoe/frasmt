@@ -136,14 +136,15 @@ class FractionalHypertreeDecompositionCommandline(object):
             vars = set(range(1, n + 1))
             if clique is not None:
                 vars.difference_update(clique)
-            self.top_ord = random.sample(vars, len(n))
+            self.top_ord = [None]
+            self.top_ord.extend(random.sample(vars, len(vars)))
             if clique is not None:
                 self.top_ord.extend(random.sample(clique, len(clique)))
             self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
 
-            self.last = []
+            self.last = [None]
             for i in range(1, n+1):
-                self.last[i] = self.add_var(name=f'last_{i}')
+                self.last.append(self.add_var(name=f'last_{i}'))
                 self.stream.write(f"(declare-const last_{i} Bool)\n")
 
             self.smallest = [[]]
@@ -339,7 +340,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             for i in clique:
                 for j in clique:
                     if i < j:
-                        if (self.top_ord is not None and self.top_ord_ref[i] < self.top_ord_ref[j]) or \
+                        if (self.top_ord is not None and self.top_ord_rev[i] < self.top_ord_rev[j]) or \
                                 (self.top_ord is None):
                             self.add_clause([self.ord[i][j]])
                         else:
@@ -430,7 +431,7 @@ class FractionalHypertreeDecompositionCommandline(object):
         for i in range(1,n+1):
             for j in range(1,n+1):
                 for w in range(1,n+1):
-                    if self.top_ord_rev(i) < self.top_ord_rev(j) and i != w and j != w:
+                    if self.top_ord_rev[i] < self.top_ord_rev[j] and i != w and j != w:
                         self.add_clause([self.ordf(j,i), -self.smallest[i][w], self.ordf(w,i)])
 
 
