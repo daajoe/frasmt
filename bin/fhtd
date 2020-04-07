@@ -161,7 +161,7 @@ def main():
     encode_cliques = args.encode_cliques
     encode_twins = args.encode_twins
     clique_k = args.clique_k
-    clique_k_sym = args.clique_k_syme
+    clique_k_sym = args.clique_k_sym
     topsort_sym = args.topsort_sym
     no_pre = args.no_preprocessing
     hypergraph = Hypergraph.from_file(fname, fischl_format=True)
