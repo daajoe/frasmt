@@ -93,11 +93,10 @@ class FractionalHypertreeDecompositionCommandline(object):
             for j in range(i + 1, n + 1):
                 # for j in range(i + 1, n + 1):
                 # (declare-const ord_ij Bool)
-                if i < j:
-                    self.ord[i][j] = self.add_var(name=f'ord_{i}_{j}')
-                    self.stream.write(f"(declare-const ord_{i}_{j} Bool)\n")
-                #else:
-                #    self.ord[j][i] = None
+                #if i < j:
+                self.ord[i][j] = self.add_var(name=f'ord_{i}_{j}')
+                self.ord[j][i] = -self.ord[i][j] #None
+                self.stream.write(f"(declare-const ord_{i}_{j} Bool)\n")
 
         # print self.hypergraph.nodes()
         # print n
@@ -216,8 +215,8 @@ class FractionalHypertreeDecompositionCommandline(object):
             elif len(weights) == 1:
                 self.stream.write(f"(assert (<= {weights[0]} {m}))\n")
 
-    def ordf(self, i, j):
-        return self.ord[i][j] if i < j else -self.ord[j][i]
+    #def ordf(self, i, j):
+    #    return self.ord[i][j] if i < j else -self.ord[j][i]
 
     def elimination_ordering(self, n):
         logging.info('Ordering')
@@ -231,7 +230,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                     # OLD VERSION
                     #C = [-self.ord[i][j] if i < j else self.ord[j][i], -self.ord[j][l] if j < l else self.ord[l][j],
                     #     self.ord[i][l] if i < l else -self.ord[l][i]]
-                    C = [-self.ordf(i,j), -self.ordf(j,l), self.ordf(i,l)]
+                    C = [-self.ord[i][j], -self.ord[j][l], self.ord[i][l]]
                     self.add_clause(C)
 
         logging.info('Edges')
@@ -330,7 +329,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                 if i in clique:
                     continue
                 for j in clique:
-                    self.add_clause([self.ordf(i,j)])
+                    self.add_clause([self.ord[i][j]])
                     # if i < j:
                     #    self.add_clause([self.ord[i][j]])
                     #else:
@@ -381,9 +380,9 @@ class FractionalHypertreeDecompositionCommandline(object):
         self.break_clique(clique=clique)
         self.encode_twins(twin_iter=twins, clique=clique)
         if topsort > 0:
-            self.topsort(clique=clique, topsort=topsort)
+            self.topsort(topsort=topsort)
 
-    def topsort(self, clique=None, topsort=1):
+    def topsort(self, topsort=1):
         assert(topsort >= 1)
         n = self.hypergraph.number_of_nodes()
         #m = self.hypergraph.number_of_edges()
@@ -412,7 +411,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                 for j in range(1,n+1):
                     for w in range(1, n + 1):
                         if i != j and i != w and w != j: # self.top_ord_rev[w] < self.top_ord_rev[j]:
-                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ordf(w,j), -self.smallest[i][j]])
+                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord[w][j], -self.smallest[i][j]])
         else:
             # if j smallest of i -> no last possible for i and vice versa
             # for i in range(1,n+1):
@@ -426,13 +425,13 @@ class FractionalHypertreeDecompositionCommandline(object):
                     for w in self.hypergraph.adjByNode(i):
                         assert(i != j and i != w)
                         if j != w:
-                            self.add_clause([-self.ordf(w,j), -self.smallest[i][j]])
+                            self.add_clause([-self.ord[w][j], -self.smallest[i][j]])
 
         for i in range(1,n+1):
             for j in range(1,n+1):
                 for w in range(1,n+1):
                     if self.top_ord_rev[i] < self.top_ord_rev[j] and i != w and j != w:
-                        self.add_clause([self.ordf(j,i), -self.smallest[i][w], self.ordf(w,i)])
+                        self.add_clause([self.ord[j][i], -self.smallest[i][w], self.ord[w][i]])
 
 
     def configration(self):
