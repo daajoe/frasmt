@@ -96,8 +96,8 @@ class FractionalHypertreeDecompositionCommandline(object):
                 if i < j:
                     self.ord[i][j] = self.add_var(name=f'ord_{i}_{j}')
                     self.stream.write(f"(declare-const ord_{i}_{j} Bool)\n")
-                else:
-                    self.ord[j][i] = None
+                #else:
+                #    self.ord[j][i] = None
 
         # print self.hypergraph.nodes()
         # print n
