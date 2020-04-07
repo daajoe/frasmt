@@ -93,8 +93,11 @@ class FractionalHypertreeDecompositionCommandline(object):
             for j in range(i + 1, n + 1):
                 # for j in range(i + 1, n + 1):
                 # (declare-const ord_ij Bool)
-                self.ord[i][j] = self.add_var(name=f'ord_{i}_{j}')
-                self.stream.write(f"(declare-const ord_{i}_{j} Bool)\n")
+                if i < j:
+                    self.ord[i][j] = self.add_var(name=f'ord_{i}_{j}')
+                    self.stream.write(f"(declare-const ord_{i}_{j} Bool)\n")
+                else:
+                    self.ord[j][i] = None
 
         # print self.hypergraph.nodes()
         # print n
@@ -210,6 +213,9 @@ class FractionalHypertreeDecompositionCommandline(object):
             elif len(weights) == 1:
                 self.stream.write(f"(assert (<= {weights[0]} {m}))\n")
 
+    def ord(self, i, j):
+        return self.ord[i][j] if i < j else -self.ord[j][i]
+
     def elimination_ordering(self, n):
         logging.info('Ordering')
         for i in range(1, n + 1):
@@ -220,8 +226,9 @@ class FractionalHypertreeDecompositionCommandline(object):
                     if i == l or j == l:
                         continue
                     # OLD VERSION
-                    C = [-self.ord[i][j] if i < j else self.ord[j][i], -self.ord[j][l] if j < l else self.ord[l][j],
-                         self.ord[i][l] if i < l else -self.ord[l][i]]
+                    #C = [-self.ord[i][j] if i < j else self.ord[j][i], -self.ord[j][l] if j < l else self.ord[l][j],
+                    #     self.ord[i][l] if i < l else -self.ord[l][i]]
+                    C = [-self.ord(i,j), -self.ord(j,l), self.ord(i,l)]
                     self.add_clause(C)
 
         logging.info('Edges')
@@ -320,20 +327,21 @@ class FractionalHypertreeDecompositionCommandline(object):
                 if i in clique:
                     continue
                 for j in clique:
-                    #if i < j:
-                    self.add_clause([self.ord[i][j]])
+                    self.add_clause([self.ord(i,j)])
+                    # if i < j:
+                    #    self.add_clause([self.ord[i][j]])
                     #else:
                     #    self.add_clause([-self.ord[j][i]])
 
             # Vertices of the clique are ordered lexicographically
             for i in clique:
                 for j in clique:
-                    if i != j:
-                        if (self.top_ord is not None and self.top_ord[i] < self.top_ord[j]) or \
-                                (self.top_ord is None and i < j):
+                    if i < j:
+                        if (self.top_ord is not None and self.top_ord_ref[i] < self.top_ord_ref[j]) or \
+                                (self.top_ord is None):
                             self.add_clause([self.ord[i][j]])
                         else:
-                            self.add_clause([-self.ord[j][i]])
+                            self.add_clause([-self.ord[i][j]])
 
     # twins is a list of list of vertices that are twins
     def encode_twins(self, twin_iter, clique):
@@ -401,7 +409,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                 for j in range(1,n+1):
                     for w in range(1, n + 1):
                         if i != j and i != w and w != j: # self.top_ord_rev[w] < self.top_ord_rev[j]:
-                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord[w][j], -self.smallest[i][j]])
+                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord(w,j), -self.smallest[i][j]])
         else:
             # if j smallest of i -> no last possible for i and vice versa
             # for i in range(1,n+1):
@@ -415,13 +423,13 @@ class FractionalHypertreeDecompositionCommandline(object):
                     for w in self.hypergraph.adjByNode(i):
                         assert(i != j and i != w)
                         if j != w:
-                            self.add_clause([-self.ord[w][j], -self.smallest[i][j]])
+                            self.add_clause([-self.ord(w,j), -self.smallest[i][j]])
 
         for i in range(1,n+1):
             for j in range(1,n+1):
                 for w in range(1,n+1):
                     if self.top_ord_rev(i) < self.top_ord_rev(j) and i != w and j != w:
-                        self.add_clause([self.ord[j][i], -self.smallest[i][w], self.ord[w][i]])
+                        self.add_clause([self.ord(j,i), -self.smallest[i][w], self.ord(w,i)])
 
 
     def configration(self):
