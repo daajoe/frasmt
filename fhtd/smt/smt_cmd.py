@@ -431,7 +431,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             for j in range(1,n+1):
                 for w in range(1,n+1):
                     if self.top_ord_rev[i] < self.top_ord_rev[j] and i != w and j != w:
-                        self.add_clause([self.ord[j][i], -self.smallest[i][w], self.ord[w][i]])
+                        self.add_clause([self.ord[j][i], -self.smallest[i][w], self.ord[w][j]])
 
 
     def configration(self):
