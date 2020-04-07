@@ -215,7 +215,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             elif len(weights) == 1:
                 self.stream.write(f"(assert (<= {weights[0]} {m}))\n")
 
-    def ord(self, i, j):
+    def ordf(self, i, j):
         return self.ord[i][j] if i < j else -self.ord[j][i]
 
     def elimination_ordering(self, n):
@@ -230,7 +230,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                     # OLD VERSION
                     #C = [-self.ord[i][j] if i < j else self.ord[j][i], -self.ord[j][l] if j < l else self.ord[l][j],
                     #     self.ord[i][l] if i < l else -self.ord[l][i]]
-                    C = [-self.ord(i,j), -self.ord(j,l), self.ord(i,l)]
+                    C = [-self.ordf(i,j), -self.ordf(j,l), self.ordf(i,l)]
                     self.add_clause(C)
 
         logging.info('Edges')
@@ -329,7 +329,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                 if i in clique:
                     continue
                 for j in clique:
-                    self.add_clause([self.ord(i,j)])
+                    self.add_clause([self.ordf(i,j)])
                     # if i < j:
                     #    self.add_clause([self.ord[i][j]])
                     #else:
@@ -411,7 +411,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                 for j in range(1,n+1):
                     for w in range(1, n + 1):
                         if i != j and i != w and w != j: # self.top_ord_rev[w] < self.top_ord_rev[j]:
-                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord(w,j), -self.smallest[i][j]])
+                            self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ordf(w,j), -self.smallest[i][j]])
         else:
             # if j smallest of i -> no last possible for i and vice versa
             # for i in range(1,n+1):
@@ -425,13 +425,13 @@ class FractionalHypertreeDecompositionCommandline(object):
                     for w in self.hypergraph.adjByNode(i):
                         assert(i != j and i != w)
                         if j != w:
-                            self.add_clause([-self.ord(w,j), -self.smallest[i][j]])
+                            self.add_clause([-self.ordf(w,j), -self.smallest[i][j]])
 
         for i in range(1,n+1):
             for j in range(1,n+1):
                 for w in range(1,n+1):
                     if self.top_ord_rev(i) < self.top_ord_rev(j) and i != w and j != w:
-                        self.add_clause([self.ord(j,i), -self.smallest[i][w], self.ord(w,i)])
+                        self.add_clause([self.ordf(j,i), -self.smallest[i][w], self.ordf(w,i)])
 
 
     def configration(self):

@@ -51,7 +51,7 @@ class FractionalHypertreeDecomposer:
     # fix ordering; compute independently for each biconnected component
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
-              encode_twins=True, clique_k=4, clique_k_sym=1, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
+              encode_twins=True, clique_k=4, topsort=0, clique_k_sym=1, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
               FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
         pre_wall = time.time()
         if self.ghtd:
@@ -181,7 +181,7 @@ class FractionalHypertreeDecomposer:
                                                                   ghtd=self.ghtd, solver_bin=self.__solver_bin,
                                                                   odebug=self.odebug)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
-                                           clique=clique, twins=twin_vertices, ubound=upper_bound)
+                                           clique=clique, topsort=topsort, twins=twin_vertices, ubound=upper_bound)
                     ret['subsolvers'][solver_run_id] = {'width': res['objective'].numerator/res['objective'].denominator,
                                                         'width_fractional': {'numerator': res['objective'].numerator,
                                                                              'denominator': res['objective'].denominator},
