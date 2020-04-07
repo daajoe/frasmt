@@ -81,7 +81,7 @@ class FractionalHypertreeDecompositionCommandline(object):
         self.stream.write('(set-logic QF_LRA)\n(set-option :print-success true)\n(set-option :produce-models true)\n')
         self.ghtd = ghtd
 
-    def prepare_vars(self, topsort=0):
+    def prepare_vars(self, topsort=0, clique=None):
         n = self.hypergraph.number_of_nodes()
         m = self.hypergraph.number_of_edges()
 
@@ -129,10 +129,18 @@ class FractionalHypertreeDecompositionCommandline(object):
                 self.stream.write(f"(assert (>= weight_{j}_e{ej} 0))\n")
 
         if topsort > 0:
+            # compute a lexicographic ordering, taking care of clique symmetry breaking also
+            vars = set(range(1, n + 1))
+            if clique is not None:
+                vars.difference_update(clique)
+            self.top_ord = random.sample(vars, len(n))
+            if clique is not None:
+                self.top_ord.extend(random.sample(clique, len(clique)))
+
+            self.last = []
             for i in range(1, n+1):
                 self.last[i] = self.add_var(name=f'last_{i}')
 
-            self.top_ord = random.sample(range(1,n+1), n)
             self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
             self.smallest = [[]]
             # ordering
@@ -302,24 +310,30 @@ class FractionalHypertreeDecompositionCommandline(object):
 
     def break_clique(self, clique):
         if clique:
+            # set max u of top_ord within clique to last(u)
+            if self.top_ord is not None:
+                m = max([self.top_ord_rev[j] for j in clique])
+                self.add_clause([-self.last[self.top_ord[m]]])
+
             # Vertices not in the clique are ordered before the clique
             for i in self.hypergraph.nodes():
                 if i in clique:
                     continue
                 for j in clique:
-                    if i < j:
-                        self.add_clause([self.ord[i][j]])
-                    else:
-                        self.add_clause([-self.ord[j][i]])
+                    #if i < j:
+                    self.add_clause([self.ord[i][j]])
+                    #else:
+                    #    self.add_clause([-self.ord[j][i]])
 
             # Vertices of the clique are ordered lexicographically
             for i in clique:
                 for j in clique:
                     if i != j:
-                        if i < j:
+                        if (self.top_ord is not None and self.top_ord[i] < self.top_ord[j]) or \
+                                (self.top_ord is None and i < j):
                             self.add_clause([self.ord[i][j]])
-                        # else:
-                        #     self.add_clause([-self.ord[j][i]])
+                        else:
+                            self.add_clause([-self.ord[j][i]])
 
     # twins is a list of list of vertices that are twins
     def encode_twins(self, twin_iter, clique):
@@ -389,6 +403,13 @@ class FractionalHypertreeDecompositionCommandline(object):
                         if i != j and i != w and w != j: # self.top_ord_rev[w] < self.top_ord_rev[j]:
                             self.add_clause([-self.arc[i][w], -self.arc[i][j], -self.ord[w][j], -self.smallest[i][j]])
         else:
+            # if j smallest of i -> no last possible for i and vice versa
+            # for i in range(1,n+1):
+            #    for j in range(1,n+1):
+            #        if i != j:
+            #            self.add_clause([-self.last[i], -self.smallest[i][j]])
+
+            # we only want the left-most vertex w
             for i in range(1,n+1):
                 for j in self.hypergraph.adjByNode(i):
                     for w in self.hypergraph.adjByNode(i):
@@ -400,7 +421,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             for j in range(1,n+1):
                 for w in range(1,n+1):
                     if self.top_ord_rev(i) < self.top_ord_rev(j) and i != w and j != w:
-                        self.add_clause([-self.ord[w][i], self.smallest[i][w]])
+                        self.add_clause([self.ord[j][i], -self.smallest[i][w], self.ord[w][i]])
 
 
     def configration(self):
@@ -433,7 +454,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             ubound = len(self.hypergraph.edges())
         logging.info("WE ARE SOLVING FOR fraction = %s" % m)
 
-        self.prepare_vars(topsort)
+        self.prepare_vars(topsort, clique)
         self.configration()
 
         enc_wall = time.time()
