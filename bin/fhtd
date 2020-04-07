@@ -104,7 +104,7 @@ def parse_args():
     parser.add_argument('-ts', '--topsort_sym', dest='topsort_sym', action='store', type=lambda x: int(x),
                         default=0,
                         help='Use topsort symmetry breaking iff > 0. [default=0],'
-                             '0 ... no symmetry breaking, 1 ... full symmetry breaking (more effort), 3 ... simplified variant using only existing arks)
+                             '0 ... no symmetry breaking, 1 ... full symmetry breaking (more effort), 3 ... simplified variant using only existing arks')
     parser.add_argument('-ncb', '--disable_clique_breaking', dest='encode_cliques', action='store_false', default=True,
                         help='Do not encode into the SMT encodinge a fixed ordering for some clique.')
     parser.add_argument('-ntb', '--disable_twin_breaking', dest='encode_twins', action='store_false', default=True,
