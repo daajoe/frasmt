@@ -139,13 +139,13 @@ class FractionalHypertreeDecompositionCommandline(object):
             self.top_ord = random.sample(vars, len(n))
             if clique is not None:
                 self.top_ord.extend(random.sample(clique, len(clique)))
+            self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
 
             self.last = []
             for i in range(1, n+1):
                 self.last[i] = self.add_var(name=f'last_{i}')
                 self.stream.write(f"(declare-const last_{i} Bool)\n")
 
-            self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
             self.smallest = [[]]
             # ordering
             for i in range(1, n + 1):
