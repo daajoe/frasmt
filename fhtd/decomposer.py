@@ -51,7 +51,7 @@ class FractionalHypertreeDecomposer:
     # fix ordering; compute independently for each biconnected component
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
-              encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
+              encode_twins=True, clique_k=4, topsort=0, clique_k_sym=1, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
               FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
         pre_wall = time.time()
         if self.ghtd:
@@ -71,9 +71,9 @@ class FractionalHypertreeDecomposer:
         # return preps
         tds = []
         solver_run_id = 1
-        ret = {'pre_wall': [], 'enc_wall': 'nan', 'z3_wall': 'nan', 'subsolvers': {}, 'pre_clique_size': [],
-               'pre_clique_k': [], 'pre_num_twins': [], 'pre_size_max_twin': [], 'smt_objective': 'nan',
-               'pre_clique_type': clique_k}
+        ret = {'pre_wall': [], 'enc_wall': 'nan', 'z3_wall': 'nan', 'subsolvers': {}, 'pre_clique_size': [], 'pre_clique_sym_size' : [],
+               'pre_clique_k': [], 'pre_clique_k_sym': [], 'pre_num_twins': [], 'pre_size_max_twin': [], 'smt_objective': 'nan',
+               'pre_clique_type': clique_k, 'pre_clique_sym_type' : clique_k_sym}
 
         if len(bcs) == 0:
             assert (len(self._pp.hgp.hg.edges()) == 0 and len(self._pp.hgp.hg.nodes()) == 0)
@@ -125,6 +125,39 @@ class FractionalHypertreeDecomposer:
                         ret['pre_clique_size'].append(pre_clique_size)
                         ret['pre_clique_k'].append(clique_k)
 
+                        # cliques for symmetry breaking
+                        pre_clique_size = 1
+                        encoder = None
+                        if clique_k_sym == 1:
+                            encoder = Hypergraph.encoder_k_hyperclique
+                        elif clique_k_sym == 2:
+                            encoder = Hypergraph.encoder_largest_clique
+                        elif clique_k_sym == 3:
+                            encoder = Hypergraph.encoder_largest_clique_neighborhood
+                        elif clique_k_sym == 4:
+                            encoder = Hypergraph.encoder_largest_clique_wo_twins
+                        elif clique_k_sym == 5:
+                            encoder = Hypergraph.encoder_clique_maximize_used_hyperedges
+                        elif clique_k_sym == 6:
+                            encoder = Hypergraph.encoder_clique_maximize_completely_used_hyperedges
+
+                        # use clique_k for computing k-hypercliques
+                        clique_k = max(3, clique_k)
+                        clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
+                                                                clingoctl=None, timeout=600)[2]
+                        if len(clique_list) > 0:
+                            clique = clique_list[0]
+                        pre_clique_size = len(clique_list)
+
+                        # still update lower bounds
+                        if clique is not None:
+                            self._pp.update_lb(clique, len(clique), clique_k == 3 and clique_k_sym == 1)
+
+                        logging.info("Computed Symmetry Clique follows.")
+                        logging.info(clique)
+                        ret['pre_clique_sym_size'].append(pre_clique_size)
+                        ret['pre_clique_k_sym'].append(clique_k_sym)
+
                     twin_vertices = None
                     if encode_twins:
                         twin_vertices = list(self._pp.hgp.hg.iter_twin_vertices())
@@ -148,7 +181,7 @@ class FractionalHypertreeDecomposer:
                                                                   ghtd=self.ghtd, solver_bin=self.__solver_bin,
                                                                   odebug=self.odebug)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
-                                           clique=clique, twins=twin_vertices, ubound=upper_bound)
+                                           clique=clique, topsort=topsort, twins=twin_vertices, ubound=upper_bound)
                     ret['subsolvers'][solver_run_id] = {'width': res['objective'].numerator/res['objective'].denominator,
                                                         'width_fractional': {'numerator': res['objective'].numerator,
                                                                              'denominator': res['objective'].denominator},

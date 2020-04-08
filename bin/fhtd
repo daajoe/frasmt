@@ -28,6 +28,7 @@ import time
 from decimal import Decimal
 from io import StringIO
 import pathlib
+import random
 
 from fractions import Fraction
 
@@ -91,9 +92,19 @@ def parse_args():
                             help='instance')
     parser.add_argument('-t', '--tmp-file', dest='tmp', action='store', type=lambda x: os.path.realpath(x),
                         help='ignored')
+    parser.add_argument('-sd', '--seed', dest='seed', action='store', type=lambda x: int(x), default=0,
+                        help='Seed for permutations used internally during encoding')
     parser.add_argument('-ck', '--clique_k', dest='clique_k', action='store', type=lambda x: int(x), default=4,
                         help='Threshold for relaxed clique computation (ideal clique = 3). [default=4],'
                              '1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
+    parser.add_argument('-cksym', '--clique_k_sym', dest='clique_k_sym', action='store', type=lambda x: int(x), default=4,
+                        help='Threshold for clique computation for symmetry. [default=1],'
+                             '1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
+                              '5 ... clique of largest used hyperedges, 6 ... clique of largest completely used hyperedges')
+    parser.add_argument('-ts', '--topsort_sym', dest='topsort_sym', action='store', type=lambda x: int(x),
+                        default=0,
+                        help='Use topsort symmetry breaking iff > 0. [default=0],'
+                             '0 ... no symmetry breaking, 1 ... full symmetry breaking (more effort), 3 ... simplified variant using only existing arks')
     parser.add_argument('-ncb', '--disable_clique_breaking', dest='encode_cliques', action='store_false', default=True,
                         help='Do not encode into the SMT encodinge a fixed ordering for some clique.')
     parser.add_argument('-ntb', '--disable_twin_breaking', dest='encode_twins', action='store_false', default=True,
@@ -144,11 +155,14 @@ def main():
     version = subprocess.check_output(["git", "describe", "--always"]).strip().decode('utf-8')
 
     args = parse_args()
+    seed = args.seed
     fname = args.instance
     epsilon = args.epsilon
     encode_cliques = args.encode_cliques
     encode_twins = args.encode_twins
     clique_k = args.clique_k
+    clique_k_sym = args.clique_k_sym
+    topsort_sym = args.topsort_sym
     no_pre = args.no_preprocessing
     hypergraph = Hypergraph.from_file(fname, fischl_format=True)
     only_fhtd = args.only_fhtd
@@ -157,6 +171,7 @@ def main():
     debug = args.debug
     odebug = args.odebug
     preprocessing_only = args.preprocessing_only
+    random.seed(seed)
     if args.smt_bin!="lib/optimathsat/optimathsat-1.6.3" and args.smt_bin_plus is not None:
         logging.error("Use either -s or -sp for the smt solver. Not both. Exiting...")
         exit(5)
@@ -177,12 +192,12 @@ def main():
     # res = td.solve()
     # print "Objective", res['objective']
 
-    output = {'hostname': socket.gethostname(),
+    output = {'hostname': socket.gethostname(), 'seed' : seed,
               'version': version, 'instance_path': fname, 'instance': os.path.basename(fname),
               'solved': 0, 'hash': sha256_checksum(fname), 'epsilon': str(epsilon), 'wall': None,
               '#hyperedges': hypergraph.number_of_edges(), '#vertices': hypergraph.number_of_nodes(),
               'size_largest_hyperedge': hypergraph.size_largest_hyperedge(), 'ghtd': int(ghtd),
-              'parameters': {'ck': clique_k, 'ncb': int(not (encode_cliques)), 'ntb': int(not (encode_twins)),
+              'parameters': {'ck': clique_k, 'ts' : topsort_sym, 'cksym' : clique_k_sym, 'ncb': int(not (encode_cliques)), 'ntb': int(not (encode_twins)),
                              'np': int(no_pre), 'nsmt': int(preprocessing_only), 'bo': int(only_fhtd)}}
 
     wall_start = time.time()
@@ -196,7 +211,7 @@ def main():
 
     try:
         res = decomposer.solve(only_fhtw=only_fhtd, encode_cliques=encode_cliques,
-                               encode_twins=encode_twins, clique_k=clique_k,
+                               encode_twins=encode_twins, clique_k=clique_k, topsort=topsort_sym, clique_k_sym=clique_k_sym,
                                run_preprocessing=not no_pre, upper_bound=upper_bound,
                                preprocessing_only=preprocessing_only,
                                FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline)
@@ -205,7 +220,7 @@ def main():
         output.update({'subsolvers': res['subsolvers'], 'solved': 1,
                        'solver_wall': wall, 'pre_wall': res['pre_wall'], 'enc_wall': res['enc_wall'],
                        'wall': wall, 'pre_clique_size': res['pre_clique_size'],
-                       'pre_clique_k': res['pre_clique_k'], 'num_twins': res['pre_num_twins'],
+                       'pre_clique_k': res['pre_clique_k'], 'pre_clique_k_sym' : res['pre_clique_k_sym'], 'num_twins': res['pre_num_twins'],
                        'pre_size_max_twin': res['pre_size_max_twin']})
         if isinstance(res['objective'], Fraction):
             output.update({'width': res['objective'].numerator/res['objective'].denominator,
