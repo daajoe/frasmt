@@ -96,10 +96,10 @@ def parse_args():
                         help='Seed for permutations used internally during encoding')
     parser.add_argument('-ck', '--clique_k', dest='clique_k', action='store', type=lambda x: int(x), default=4,
                         help='Threshold for relaxed clique computation (ideal clique = 3). [default=4],'
-                             '1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
-    parser.add_argument('-cksym', '--clique_k_sym', dest='clique_k_sym', action='store', type=lambda x: int(x), default=4,
-                        help='Threshold for clique computation for symmetry. [default=1],'
-                             '1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
+                             '0 ... no clique computation, 1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
+    parser.add_argument('-cksym', '--clique_k_sym', dest='clique_k_sym', action='store', type=lambda x: int(x), default=0,
+                        help='Threshold for clique computation for symmetry. [default=0],'
+                             '0 ... no clique symmetry breaking, 1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
                               '5 ... clique of largest used hyperedges, 6 ... clique of largest completely used hyperedges')
     parser.add_argument('-ts', '--topsort_sym', dest='topsort_sym', action='store', type=lambda x: int(x),
                         default=0,
@@ -158,7 +158,7 @@ def main():
     seed = args.seed
     fname = args.instance
     epsilon = args.epsilon
-    encode_cliques = args.encode_cliques
+    encode_cliques = args.encode_cliques and args.clique_k > 0
     encode_twins = args.encode_twins
     clique_k = args.clique_k
     clique_k_sym = args.clique_k_sym
@@ -203,7 +203,7 @@ def main():
     wall_start = time.time()
     stream = StringIO()
 
-    # stream = open("output.txt", "w+")
+    #stream = open("output.txt", "w+")
     # x.write(self.stream.getvalue())
 
     decomposer = FractionalHypertreeDecomposer(hypergraph, timeout=20, stream=stream, checker_epsilon=epsilon,

@@ -102,8 +102,6 @@ class FractionalHypertreeDecomposer:
                         logging.info("Compute cliques for encoding.")
 
                         pre_clique_size = 1
-                        clique = None
-
                         # Values clique_k are overloaded
                         # clique_k = 1 ..largest hyperedge, 2 .. largest_clique (Z3), k>3 k-cliques
                         if clique_k == 1:
@@ -127,6 +125,8 @@ class FractionalHypertreeDecomposer:
 
                         # cliques for symmetry breaking
                         pre_clique_size = 1
+                        clique_list = []
+                        clique = None
                         encoder = None
                         if clique_k_sym == 1:
                             encoder = Hypergraph.encoder_k_hyperclique
@@ -142,9 +142,11 @@ class FractionalHypertreeDecomposer:
                             encoder = Hypergraph.encoder_clique_maximize_completely_used_hyperedges
 
                         # use clique_k for computing k-hypercliques
-                        clique_k = max(3, clique_k)
-                        clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
+                        if encoder is not None:
+                            clique_k = max(3, clique_k)
+                            clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
                                                                 clingoctl=None, timeout=600)[2]
+
                         if len(clique_list) > 0:
                             clique = clique_list[0]
                         pre_clique_size = len(clique_list)
@@ -178,7 +180,7 @@ class FractionalHypertreeDecomposer:
                     z3_wall = time.time()
                     decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
                                                                   checker_epsilon=self.__checker_epsilon,
-                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin,
+                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin, #debug=True,
                                                                   odebug=self.odebug)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
                                            clique=clique, topsort=topsort, twins=twin_vertices, ubound=upper_bound)
