@@ -680,7 +680,7 @@ class FractionalHypertreeDecompositionCommandline(object):
             is_z3 = True
         elif 'MathSAT5' in solver_name:
             p1 = subprocess.Popen(
-                [self.solver_bin, '-stats', "-verbosity=2", "-input=smt2", "-opt.theory.la.delta_pow=18"],
+                [self.solver_bin, '-stats', "-verbosity=2", "-input=smt2", "-opt.theory.la.delta_pow=18"], #"-opt.theory.la.delta_pow=9"],
                 stdin=subprocess.PIPE, stdout=modelf, stderr=errorf, shell=True)
             is_z3 = False
         else:
@@ -688,6 +688,9 @@ class FractionalHypertreeDecompositionCommandline(object):
             raise RuntimeError
 
         p1.communicate(input=inp_stream.getvalue().encode())
+        if p1.returncode != 0:
+            logging.error("Solver-Process terminated with returncode {}".format(p1.returncode))
+            raise RuntimeError
         errorf.seek(0)
         err = errorf.read().decode('utf8')
         if err != '':
