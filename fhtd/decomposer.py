@@ -52,6 +52,7 @@ class FractionalHypertreeDecomposer:
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
               encode_twins=True, clique_k=4, topsort=0, clique_k_sym=1, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
+              clique_timeout=600, clique_extended_lowerbounds=True,
               FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
         pre_wall = time.time()
         if self.ghtd:
@@ -145,7 +146,7 @@ class FractionalHypertreeDecomposer:
                         if encoder is not None:
                             clique_k = max(3, clique_k)
                             clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
-                                                                clingoctl=None, timeout=600)[2]
+                                                                clingoctl=None, clique_timeout=clique_timeout)[2]
 
                         if len(clique_list) > 0:
                             clique = clique_list[0]
@@ -153,7 +154,7 @@ class FractionalHypertreeDecomposer:
 
                         # still update lower bounds
                         # TODO: add parameter
-                        if clique is not None:
+                        if clique_extended_lowerbounds and clique is not None:
                             self._pp.update_lb(clique, len(clique), clique_k == 3 and clique_k_sym == 1)
 
                         logging.info("Computed Symmetry Clique follows.")

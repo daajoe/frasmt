@@ -101,6 +101,10 @@ def parse_args():
                         help='Threshold for clique computation for symmetry. [default=0],'
                              '0 ... no clique symmetry breaking, 1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
                               '5 ... clique of largest used hyperedges, 6 ... clique of largest completely used hyperedges')
+    parser.add_argument('-ncl', '--no-clique-extended-lbs', dest='clique_extended_lowerbounds', action='store_false', default=True,
+                        help='Do not use lowerbounds for cliques computed during clique symmetry breaking.')
+    parser.add_argument('-ct', '--clique-timeout', dest='clique_timeout', action='store', type=lambda x: int(x), default=600,
+                        help='Number of seconds that is at most spent during computing cliques for symmetry breaking. [Default=600]')
     parser.add_argument('-ts', '--topsort_sym', dest='topsort_sym', action='store', type=lambda x: int(x),
                         default=0,
                         help='Use topsort symmetry breaking iff > 0. [default=0],'
@@ -165,6 +169,8 @@ def main():
     topsort_sym = args.topsort_sym
     if topsort_sym:
         encode_twins = False
+    clique_timeout = args.clique_timeout
+    clique_extended_lowerbounds = args.clique_extended_lowerbounds
     no_pre = args.no_preprocessing
     hypergraph = Hypergraph.from_file(fname, fischl_format=True)
     only_fhtd = args.only_fhtd
@@ -215,7 +221,7 @@ def main():
         res = decomposer.solve(only_fhtw=only_fhtd, encode_cliques=encode_cliques,
                                encode_twins=encode_twins, clique_k=clique_k, topsort=topsort_sym, clique_k_sym=clique_k_sym,
                                run_preprocessing=not no_pre, upper_bound=upper_bound,
-                               preprocessing_only=preprocessing_only,
+                               preprocessing_only=preprocessing_only, clique_timeout=clique_timeout, clique_extended_lowerbounds=clique_extended_lowerbounds,
                                FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline)
         # set to True for fhtw only
         wall = time.time() - wall_start
