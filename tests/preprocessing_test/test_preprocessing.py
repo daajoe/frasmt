@@ -45,7 +45,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         #return
         hg = self.loadFile(self.filePath("testHG/") + "C13_7.edge")
         self.assertIsNotNone(hg)
-        pp = d.FractionalHypertreeDecomposer(hg)
+        pp = d.FractionalHypertreeDecomposer(hg, solver_bin='lib/optimathsat/optimathsat-1.6.3')
         #pp = p.FractionalHyperTreeDecomposition_Preprocessor(hgpv.HypergraphPrimalView(hg))
         self.assertEquals([set(range(1, 14))],
                           [x for x in pp._pp.hgp.biconnected_components()])
@@ -62,7 +62,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
 
         hg = self.loadFile(self.filePath("./hyperbench/cq/imdb-q13a.hg"), fischl_format=True)
         self.assertIsNotNone(hg)
-        pp = d.FractionalHypertreeDecomposer(hg)
+        pp = d.FractionalHypertreeDecomposer(hg, solver_bin='lib/optimathsat/optimathsat-1.6.3')
         #pp = p.FractionalHyperTreeDecomposition_Preprocessor(hgpv.HypergraphPrimalView(hg))
         pp.solve()
 
@@ -75,7 +75,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         if doRealLifeTests:
             self.mapBenchmarks("./hyperbench/",
                                lambda args: d.FractionalHypertreeDecomposer(
-                                   self.loadFile(args["path"], fischl_format=True)).solve(only_fhtw=True))
+                                   self.loadFile(args["path"], fischl_format=True, solver_bin='lib/optimathsat/optimathsat-1.6.3')).solve(only_fhtw=True))
 
     def testRemoveHyperDegree(self):
         hg = self.loadFile(self.filePath("testHG/") + "C13_7.edge")
@@ -143,7 +143,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         hg = self.loadFile(self.filePath("testHG/") + "C13_7.edge")
         self.assertIsNotNone(hg)
         self.assertEquals(13, hg.number_of_nodes())
-        pp = d.FractionalHypertreeDecomposer(hg)
+        pp = d.FractionalHypertreeDecomposer(hg, solver_bin='lib/optimathsat/optimathsat-1.6.3')
         pp.twin_vertices()
         self.assertEquals([list(range(1, 14))],
                           # [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13]],

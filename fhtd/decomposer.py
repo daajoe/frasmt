@@ -37,6 +37,7 @@ class FractionalHypertreeDecomposer:
                  solver_bin=None, odebug=None):
 
         self.odebug = odebug
+        assert(solver_bin is not None)
         self.__solver_bin = solver_bin
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
@@ -147,7 +148,7 @@ class FractionalHypertreeDecomposer:
                             clique_k = max(3, clique_k)
                             clique_symm_wall = time.time()
                             clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
-                                                                clingoctl=None, clique_timeout=clique_timeout)[2]
+                                                                clingoctl=None, timeout=clique_timeout)[2]
                             ret['clique_symm_time'] = time.time() - clique_symm_wall
 
                         if len(clique_list) > 0:
