@@ -74,7 +74,7 @@ class FractionalHypertreeDecomposer:
         solver_run_id = 1
         ret = {'pre_wall': [], 'enc_wall': 'nan', 'z3_wall': 'nan', 'subsolvers': {}, 'pre_clique_size': [], 'pre_clique_sym_size' : [],
                'pre_clique_k': [], 'pre_clique_k_sym': [], 'pre_num_twins': [], 'pre_size_max_twin': [], 'smt_objective': 'nan',
-               'pre_clique_type': clique_k, 'pre_clique_sym_type' : clique_k_sym}
+               'pre_clique_type': clique_k, 'pre_clique_sym_type' : clique_k_sym, 'clique_symm_time': 'nan'}
 
         if len(bcs) == 0:
             assert (len(self._pp.hgp.hg.edges()) == 0 and len(self._pp.hgp.hg.nodes()) == 0)
@@ -145,8 +145,10 @@ class FractionalHypertreeDecomposer:
                         # use clique_k for computing k-hypercliques
                         if encoder is not None:
                             clique_k = max(3, clique_k)
+                            clique_symm_wall = time.time()
                             clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
                                                                 clingoctl=None, clique_timeout=clique_timeout)[2]
+                            ret['clique_symm_time'] = time.time() - clique_symm_wall
 
                         if len(clique_list) > 0:
                             clique = clique_list[0]
