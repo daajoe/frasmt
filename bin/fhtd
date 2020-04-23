@@ -158,11 +158,13 @@ def main():
     seed = args.seed
     fname = args.instance
     epsilon = args.epsilon
-    encode_cliques = args.encode_cliques and args.clique_k > 0
+    encode_cliques = args.encode_cliques #and args.clique_k > 0
     encode_twins = args.encode_twins
     clique_k = args.clique_k
     clique_k_sym = args.clique_k_sym
     topsort_sym = args.topsort_sym
+    if topsort_sym:
+        encode_twins = False
     no_pre = args.no_preprocessing
     hypergraph = Hypergraph.from_file(fname, fischl_format=True)
     only_fhtd = args.only_fhtd

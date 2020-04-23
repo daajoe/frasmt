@@ -152,6 +152,7 @@ class FractionalHypertreeDecomposer:
                         pre_clique_size = len(clique_list)
 
                         # still update lower bounds
+                        # TODO: add parameter
                         if clique is not None:
                             self._pp.update_lb(clique, len(clique), clique_k == 3 and clique_k_sym == 1)
 
