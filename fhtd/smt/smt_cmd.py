@@ -346,7 +346,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                             self.add_clause([-self.ord[i][j]])
 
     # twins is a list of list of vertices that are twins
-    def encode_twins(self, twin_iter, clique):
+    def encode_twins(self, twin_iter, clique, topsort):
         logging.info("Hypergraph %s" % self.hypergraph.number_of_nodes())
         if not clique:
             clique = []
@@ -365,7 +365,7 @@ class FractionalHypertreeDecompositionCommandline(object):
                                 continue
                             logging.info("i={i}, j={j}".format(i=i, j=j))
                             logging.info("ord=%s,%s" % (len(self.ord), len(self.ord[0])))
-                            if i < j:
+                            if (topsort == 0 and i < j) or (topsort and self.top_ord_rev[i] < self.top_ord_rev[j]):
                                 self.add_clause([self.ord[i][j]])
                                 # self.stream.write("(assert (ord_{i}_{j}))\n".format(i=i, j=j))
                             # else:
@@ -378,7 +378,7 @@ class FractionalHypertreeDecompositionCommandline(object):
         self.elimination_ordering(n)
         self.cover(n)
         self.break_clique(clique=clique)
-        self.encode_twins(twin_iter=twins, clique=clique)
+        self.encode_twins(twin_iter=twins, clique=clique, topsort=topsort)
         if topsort > 0:
             self.topsort(topsort=topsort)
 

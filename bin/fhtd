@@ -167,8 +167,8 @@ def main():
     clique_k = args.clique_k
     clique_k_sym = args.clique_k_sym
     topsort_sym = args.topsort_sym
-    if topsort_sym:
-        encode_twins = False
+    #if topsort_sym:
+    #    encode_twins = False
     clique_timeout = args.clique_timeout
     clique_extended_lowerbounds = args.clique_extended_lowerbounds
     no_pre = args.no_preprocessing
