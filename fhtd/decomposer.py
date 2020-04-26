@@ -37,6 +37,7 @@ class FractionalHypertreeDecomposer:
                  solver_bin=None, odebug=None):
 
         self.odebug = odebug
+        assert(solver_bin is not None)
         self.__solver_bin = solver_bin
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
@@ -52,6 +53,7 @@ class FractionalHypertreeDecomposer:
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
               encode_twins=True, clique_k=4, topsort=0, clique_k_sym=1, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
+              clique_timeout=600, clique_extended_lowerbounds=True,
               FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
         pre_wall = time.time()
         if self.ghtd:
@@ -73,7 +75,7 @@ class FractionalHypertreeDecomposer:
         solver_run_id = 1
         ret = {'pre_wall': [], 'enc_wall': 'nan', 'z3_wall': 'nan', 'subsolvers': {}, 'pre_clique_size': [], 'pre_clique_sym_size' : [],
                'pre_clique_k': [], 'pre_clique_k_sym': [], 'pre_num_twins': [], 'pre_size_max_twin': [], 'smt_objective': 'nan',
-               'pre_clique_type': clique_k, 'pre_clique_sym_type' : clique_k_sym}
+               'pre_clique_type': clique_k, 'pre_clique_sym_type' : clique_k_sym, 'clique_symm_time': 'nan'}
 
         if len(bcs) == 0:
             assert (len(self._pp.hgp.hg.edges()) == 0 and len(self._pp.hgp.hg.nodes()) == 0)
@@ -102,8 +104,6 @@ class FractionalHypertreeDecomposer:
                         logging.info("Compute cliques for encoding.")
 
                         pre_clique_size = 1
-                        clique = None
-
                         # Values clique_k are overloaded
                         # clique_k = 1 ..largest hyperedge, 2 .. largest_clique (Z3), k>3 k-cliques
                         if clique_k == 1:
@@ -127,6 +127,8 @@ class FractionalHypertreeDecomposer:
 
                         # cliques for symmetry breaking
                         pre_clique_size = 1
+                        clique_list = []
+                        clique = None
                         encoder = None
                         if clique_k_sym == 1:
                             encoder = Hypergraph.encoder_k_hyperclique
@@ -142,15 +144,20 @@ class FractionalHypertreeDecomposer:
                             encoder = Hypergraph.encoder_clique_maximize_completely_used_hyperedges
 
                         # use clique_k for computing k-hypercliques
-                        clique_k = max(3, clique_k)
-                        clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
-                                                                clingoctl=None, timeout=600)[2]
+                        if encoder is not None:
+                            clique_k = max(3, clique_k)
+                            clique_symm_wall = time.time()
+                            clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
+                                                                clingoctl=None, timeout=clique_timeout)[2]
+                            ret['clique_symm_time'] = time.time() - clique_symm_wall
+
                         if len(clique_list) > 0:
                             clique = clique_list[0]
                         pre_clique_size = len(clique_list)
 
                         # still update lower bounds
-                        if clique is not None:
+                        # TODO: add parameter
+                        if clique_extended_lowerbounds and clique is not None:
                             self._pp.update_lb(clique, len(clique), clique_k == 3 and clique_k_sym == 1)
 
                         logging.info("Computed Symmetry Clique follows.")
@@ -178,7 +185,7 @@ class FractionalHypertreeDecomposer:
                     z3_wall = time.time()
                     decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
                                                                   checker_epsilon=self.__checker_epsilon,
-                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin,
+                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin, #debug=True,
                                                                   odebug=self.odebug)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
                                            clique=clique, topsort=topsort, twins=twin_vertices, ubound=upper_bound)
