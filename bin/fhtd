@@ -99,7 +99,8 @@ def parse_args():
                              '0 ... no clique computation, 1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
     parser.add_argument('-cksym', '--clique_k_sym', dest='clique_k_sym', action='store', type=lambda x: int(x), default=0,
                         help='Threshold for clique computation for symmetry. [default=0],'
-                             '0 ... no clique symmetry breaking, 1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
+                             '0 ... no clique symmetry breaking, 1 ... largest k-hyperclique, '
+                             '2 ... largest clique,  3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
                               '5 ... clique of largest used hyperedges, 6 ... clique of largest completely used hyperedges')
     parser.add_argument('-ncl', '--no-clique-extended-lbs', dest='clique_extended_lowerbounds', action='store_false', default=True,
                         help='Do not use lowerbounds for cliques computed during clique symmetry breaking.')
@@ -109,10 +110,14 @@ def parse_args():
                         default=0,
                         help='Use topsort symmetry breaking iff > 0. [default=0],'
                              '0 ... no symmetry breaking, 1 ... full symmetry breaking (more effort), 2 ... simplified variant using only existing arks')
-    parser.add_argument('-ncb', '--disable_clique_breaking', dest='encode_cliques', action='store_false', default=True,
+    parser.add_argument('-sym_eCb4lb', '--encode_clique_breaking4lower_bounds', dest='encode_cliques', action='store', type=lambda x: bool(x), default=True,
                         help='Do not encode into the SMT encodinge a fixed ordering for some clique.')
-    parser.add_argument('-ntb', '--disable_twin_breaking', dest='encode_twins', action='store_false', default=True,
+    parser.add_argument('-sym_eTb4lb', '--encode_twin_breaking4lower_bounds', dest='encode_twins', action='store',type=lambda: x: bool(x),  default=True,
                         help='Do not encode into the SMT encodinge a fixed ordering for twin vertices.')
+#    parser.add_argument('-ncb', '--disable_clique_breaking', dest='encode_cliques', action='store_false', default=True,
+#                        help='Do not encode into the SMT encodinge a fixed ordering for some clique.')
+#    parser.add_argument('-ntb', '--disable_twin_breaking', dest='encode_twins', action='store_false', default=True,
+#                        help='Do not encode into the SMT encodinge a fixed ordering for twin vertices.')
     parser.add_argument('-np', '--disable-prepocessing', dest='no_preprocessing', action='store_true', default=False,
                         help='Disable preprocessing.')
     parser.add_argument('-nsmt', '--disable_solving', dest='preprocessing_only', action='store_true', default=False,
