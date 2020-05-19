@@ -69,6 +69,9 @@ class FractionalHypertreeDecompositionCommandline(object):
         self.arc = None
         self.weight = None
         self.last = None
+        self.bb = None
+        self.l = None
+        self.od = None
         self.top_ord = None
         self.top_ord_rev = None
         self.smallest = None
@@ -142,9 +145,21 @@ class FractionalHypertreeDecompositionCommandline(object):
             self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
 
             self.last = [None]
+            if clique and len(clique) == 0: #dynamic clique symm breaking
+                self.l = [None]
+                self.bb = [None]
+                self.od = [None]
             for i in range(1, n+1):
                 self.last.append(self.add_var(name=f'last_{i}'))
                 self.stream.write(f"(declare-const last_{i} Bool)\n")
+                # vars for dynamic clique symm breaking
+                if clique and len(clique) == 0:
+                    self.l.append(self.add_var(name=f'l_{i}'))
+                    self.stream.write(f"(declare-const l_{i} Bool)\n")
+                    self.od.append(self.add_var(name=f'od_{i}'))
+                    self.stream.write(f"(declare-const od_{i} Int)\n")
+                    self.bb.append(self.add_var(name=f'bb_{i}'))
+                    self.stream.write(f"(declare-const bb_{i} Bool)\n")
 
             self.smallest = [[]]
             # ordering
@@ -350,37 +365,42 @@ class FractionalHypertreeDecompositionCommandline(object):
             # FIX last of top_ord, contained in ACTUAL CLIQUE BREAKING as below
             if self.top_ord is not None:
                 self.stream.write(
-                    f"(assert (or (> {self.od[i]} 0) {self.literal_list([-self.l[i], self.last[i]])}))\n")
+                    f"(assert (or (= {self.od[i]} 0) {self.literal_list([-self.last[i]])}))\n")
+                #self.stream.write(
+                #    f"(assert (or (> {self.od[i]} 0) {self.literal_list([-self.l[i], self.last[i]])}))\n")
 
         #TODO: break symmetry as below
 
     def break_clique(self, clique):
         if clique:
-            # set max u of top_ord within clique to last(u)
-            if self.top_ord is not None:
-                m = max([self.top_ord_rev[j] for j in clique])
-                self.add_clause([-self.last[self.top_ord[m]]])
+            if len(clique) == 0: #dynamic clique symm breaking
+                self.break_dynamic_clique()
+            else:
+                # set max u of top_ord within clique to last(u)
+                if self.top_ord is not None:
+                    m = max([self.top_ord_rev[j] for j in clique])
+                    self.add_clause([-self.last[self.top_ord[m]]])
 
-            # Vertices not in the clique are ordered before the clique
-            for i in self.hypergraph.nodes():
-                if i in clique:
-                    continue
-                for j in clique:
-                    self.add_clause([self.ord[i][j]])
-                    # if i < j:
-                    #    self.add_clause([self.ord[i][j]])
-                    #else:
-                    #    self.add_clause([-self.ord[j][i]])
+                # Vertices not in the clique are ordered before the clique
+                for i in self.hypergraph.nodes():
+                    if i in clique:
+                        continue
+                    for j in clique:
+                        self.add_clause([self.ord[i][j]])
+                        # if i < j:
+                        #    self.add_clause([self.ord[i][j]])
+                        #else:
+                        #    self.add_clause([-self.ord[j][i]])
 
-            # Vertices of the clique are ordered lexicographically
-            for i in clique:
-                for j in clique:
-                    if i < j:
-                        if (self.top_ord is not None and self.top_ord_rev[i] < self.top_ord_rev[j]) or \
-                                (self.top_ord is None):
-                            self.add_clause([self.ord[i][j]])
-                        else:
-                            self.add_clause([-self.ord[i][j]])
+                # Vertices of the clique are ordered lexicographically
+                for i in clique:
+                    for j in clique:
+                        if i < j:
+                            if (self.top_ord is not None and self.top_ord_rev[i] < self.top_ord_rev[j]) or \
+                                    (self.top_ord is None):
+                                self.add_clause([self.ord[i][j]])
+                            else:
+                                self.add_clause([-self.ord[i][j]])
 
     # twins is a list of list of vertices that are twins
     def encode_twins(self, twin_iter, clique, topsort):
