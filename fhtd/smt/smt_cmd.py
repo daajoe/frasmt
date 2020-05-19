@@ -178,6 +178,9 @@ class FractionalHypertreeDecompositionCommandline(object):
             ret = '%s' % self._vartab.get(x)
         return ret
 
+    def literal_list(self, C):
+        return ' '.join([self.literal_str(x) for x in C])
+
     def add_clause(self, C):
         # C = map(neg, C)
         # self.stream.write("%s 0\n" %" ".join(map(str,C)))
@@ -318,16 +321,36 @@ class FractionalHypertreeDecompositionCommandline(object):
         # assert (=> arc_ij  (>= (+ weight_j_e2 weight_j_e5 weight_j_e7 ) 1) )
 
     def break_dynamic_clique(self): #, clique):
-        #if clique:
-        #TODO: set last?
         self.add_clause([self.bb(i) for i in self.hypergraph.nodes()])
         for i in self.hypergraph.nodes():
-            self.stream.write(f"(assert (= {self.od[i]} (+ {' '.join([self.arc[i][j] for j in self.hypergraph.nodes() if i != j])})))\n")
+            # COMPUTATION of out-degree od
+            self.stream.write(f"(assert (= {self.od[i]} (+ {self.literal_list([self.arc[i][j] for j in self.hypergraph.nodes() if i != j])})))\n")
             for j in self.hypergraph.nodes():
                 if i < j:
+                    # only one biggest bag bb
                     self.add_clause([-self.bb[i], -self.bb[j]])
-                    self.add_clause([-self.ord[i][j], self.arc[i][j], -self.bb[i]])
-                    self.stream.write(f"(assert (or {' '.join([-self.ord[i][j], self.bb[i], -self.bb[j]])} (<= {self.od[i], self.od[j]})))\n")
+                # biggest bag needs to reach all vertices afterwards
+                self.add_clause([-self.ord[i][j], self.arc[i][j], -self.bb[i]])
+                # biggest bag indeed the biggest
+                self.stream.write(f"(assert (or {self.literal_list([-self.ord[i][j], self.bb[i], -self.bb[j]])} (<= {self.od[i], self.od[j]})))\n")
+
+                if i < j: # ACTUAL CLIQUE BREAKING as below
+                    sign = 1 if (self.top_ord is not None and self.top_ord_rev[i] < self.top_ord_rev[j]) or (self.top_ord is None) else -1
+                    self.add_clause([-self.l[i], -self.l[j], sign * self.ord[i][j]]) # vertices of the clique are ordered lexikog
+                    self.add_clause([self.l[i], -self.l[j], self.ord[i][j]]) # vertices not in the clique are ordered before the clique
+
+                # COMPUTATION OF ELEMENTS IN THE CLIQUE -> use l for that
+                # l is ONLY for clique members
+                self.add_clause([-self.l[i], self.bb[i], -self.bb[j], self.ord[j][i]])
+                # member of the clique are for sure in l
+                self.add_clause([-self.bb[i], -self.ord[i][j], self.l[j]])
+            # bb is always in the clique -> l
+            self.add_clause([-self.bb[i], self.l[i]])
+
+            # FIX last of top_ord, contained in ACTUAL CLIQUE BREAKING as below
+            if self.top_ord is not None:
+                self.stream.write(
+                    f"(assert (or (> {self.od[i]} 0) {self.literal_list([-self.l[i], self.last[i]])}))\n")
 
         #TODO: break symmetry as below
 
