@@ -136,11 +136,11 @@ class FractionalHypertreeDecompositionCommandline(object):
         if topsort > 0:
             # compute a lexicographic ordering, taking care of clique symmetry breaking also
             vars = set(range(1, n + 1))
-            if clique is not None:
+            if clique is not None and len(clique) > 0:
                 vars.difference_update(clique)
             self.top_ord = [None]
             self.top_ord.extend(random.sample(vars, len(vars)))
-            if clique is not None:
+            if clique is not None and len(clique) > 0:
                 self.top_ord.extend(random.sample(clique, len(clique)))
             self.top_ord_rev = {self.top_ord[i]:i for i in range(1,n+1)}
 

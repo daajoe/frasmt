@@ -130,6 +130,9 @@ class FractionalHypertreeDecomposer:
                         clique_list = []
                         clique = None
                         encoder = None
+
+                        if clique_k_sym == -1:
+                            clique = []
                         if clique_k_sym == 1:
                             encoder = Hypergraph.encoder_k_hyperclique
                         elif clique_k_sym == 2:
@@ -157,7 +160,7 @@ class FractionalHypertreeDecomposer:
 
                         # still update lower bounds
                         # TODO: add parameter
-                        if clique_extended_lowerbounds and clique is not None:
+                        if clique_extended_lowerbounds and clique is not None and len(clique) > 0:
                             self._pp.update_lb(clique, len(clique), clique_k == 3 and clique_k_sym == 1)
 
                         logging.info("Computed Symmetry Clique follows.")

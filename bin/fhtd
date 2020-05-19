@@ -99,7 +99,7 @@ def parse_args():
                              '0 ... no clique computation, 1 ... largest hyperedge, 2 ... largest_clique (Z3), 3+ ... k-hyperclique (ASP)')
     parser.add_argument('-cksym', '--clique_k_sym', dest='clique_k_sym', action='store', type=lambda x: int(x), default=0,
                         help='Threshold for clique computation for symmetry. [default=0],'
-                             '0 ... no clique symmetry breaking, 1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
+                             '-1 ... dynamic clique, 0 ... no clique symmetry breaking, 1 ... largest k-hyperclique, 2 ... largest clique, 3 ... largest clique incl. neighborhood, 4 ... largest clique excluding twins, '
                               '5 ... clique of largest used hyperedges, 6 ... clique of largest completely used hyperedges')
     parser.add_argument('-ncl', '--no-clique-extended-lbs', dest='clique_extended_lowerbounds', action='store_false', default=True,
                         help='Do not use lowerbounds for cliques computed during clique symmetry breaking.')
