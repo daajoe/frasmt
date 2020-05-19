@@ -317,6 +317,20 @@ class FractionalHypertreeDecompositionCommandline(object):
                     self.stream.write(f"(assert (>= {weights[0]} 1))\n")
         # assert (=> arc_ij  (>= (+ weight_j_e2 weight_j_e5 weight_j_e7 ) 1) )
 
+    def break_dynamic_clique(self): #, clique):
+        #if clique:
+        #TODO: set last?
+        self.add_clause([self.bb(i) for i in self.hypergraph.nodes()])
+        for i in self.hypergraph.nodes():
+            self.stream.write(f"(assert (= {self.od[i]} (+ {' '.join([self.arc[i][j] for j in self.hypergraph.nodes() if i != j])})))\n")
+            for j in self.hypergraph.nodes():
+                if i < j:
+                    self.add_clause([-self.bb[i], -self.bb[j]])
+                    self.add_clause([-self.ord[i][j], self.arc[i][j], -self.bb[i]])
+                    self.stream.write(f"(assert (or {' '.join([-self.ord[i][j], self.bb[i], -self.bb[j]])} (<= {self.od[i], self.od[j]})))\n")
+
+        #TODO: break symmetry as below
+
     def break_clique(self, clique):
         if clique:
             # set max u of top_ord within clique to last(u)
