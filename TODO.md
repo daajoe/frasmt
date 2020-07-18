@@ -1,4 +1,11 @@
 # TODOS
+
+
+## parser
+- fischl format sometimes has no newline
+- check edges vs. 
+
+
 Update networkx 1.11 -> 2.x
 
 networkx 2.x yields

@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env false
 # coding=utf-8
 import logging
 import os
-import sys
 
 import psutil
 
@@ -29,10 +28,10 @@ def handler(signum, frame):
         try:
             os.kill(child.pid, 15)
         except OSError as e:
-            logging.warn('Process might already be gone. See error below.')
-            logging.warn('%s' % str(e))
+            logging.warning('Process might already be gone. See error below.')
+            logging.warning('%s' % str(e))
 
-    logging.warn('SIGNAL received')
+    logging.warning('SIGNAL received')
     if signum == 15:
         raise TimeoutException('signal')
     else:
@@ -40,5 +39,5 @@ def handler(signum, frame):
 
 
 def nothing(signum, frame):
-    logging.warn('SIGNAL received\n')
-    logging.warn('SIGNAL ignored...\n')
+    logging.warning('SIGNAL received\n')
+    logging.warning('SIGNAL ignored...\n')

@@ -16,7 +16,8 @@
 # copy of the GNU General Public License along with
 # fhtd.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import absolute_import
+from pathlib import Path
+import os
 
 import logging
 import time
@@ -26,12 +27,18 @@ from htd_validate.decompositions import fhtd
 from htd_validate.utils.hypergraph_primalview import Hypergraph, HypergraphPrimalView
 
 from fhtd.preprocessing import FractionalHyperTreeDecomposition_Preprocessor as Preprocessor
-from fhtd.smt import FractionalHypertreeDecomposition_z3
+from fhtd.smt import FractionalHypertreeDecompositionCommandline
+# from fhtd.smt import FractionalHypertreeDecomposition_z3
 
 
 class FractionalHypertreeDecomposer:
     # suggested order [1], ..., [k]
-    def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False):
+    def __init__(self, hypergraph, replay=True, lb=1, timeout=20, stream=None, checker_epsilon=None, ghtd=False,
+                 solver_bin=None, odebug=None):
+
+        self.odebug = odebug
+        assert(solver_bin is not None)
+        self.__solver_bin = solver_bin
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
 
@@ -45,10 +52,12 @@ class FractionalHypertreeDecomposer:
     # fix ordering; compute independently for each biconnected component
     # todo: for hypergraph?!
     def solve(self, only_fhtw=False, connect_components=True, accuracy=Hypergraph.ACCURACY * 1000, encode_cliques=True,
-              encode_twins=True, clique_k=4, run_preprocessing=True, upper_bound=None, preprocessing_only=False):
+              encode_twins=True, clique_k=4, topsort=0, clique_k_sym=1, run_preprocessing=True, upper_bound=None, preprocessing_only=False,
+              clique_timeout=600, clique_extended_lowerbounds=True,
+              FractionalHypertreeDecomposition=FractionalHypertreeDecompositionCommandline):
         pre_wall = time.time()
         if self.ghtd:
-            run_preprocessing=False
+            run_preprocessing = False
             logging.warning("Option ghtd disables preprocessing for now!")
 
         # only fhtw implies connect components
@@ -64,9 +73,9 @@ class FractionalHypertreeDecomposer:
         # return preps
         tds = []
         solver_run_id = 1
-        ret = {'pre_wall': [], 'enc_wall': 'nan', 'z3_wall': 'nan', 'subsolvers': {}, 'pre_clique_size': [],
-               'pre_clique_k': [], 'pre_num_twins': [], 'pre_size_max_twin': [], 'smt_objective': 'nan',
-               'pre_clique_type': clique_k}
+        ret = {'pre_wall': [], 'enc_wall': 'nan', 'z3_wall': 'nan', 'subsolvers': {}, 'pre_clique_size': [], 'pre_clique_sym_size' : [],
+               'pre_clique_k': [], 'pre_clique_k_sym': [], 'pre_num_twins': [], 'pre_size_max_twin': [], 'smt_objective': 'nan',
+               'pre_clique_type': clique_k, 'pre_clique_sym_type' : clique_k_sym, 'clique_symm_time': 'nan'}
 
         if len(bcs) == 0:
             assert (len(self._pp.hgp.hg.edges()) == 0 and len(self._pp.hgp.hg.nodes()) == 0)
@@ -95,9 +104,6 @@ class FractionalHypertreeDecomposer:
                         logging.info("Compute cliques for encoding.")
 
                         pre_clique_size = 1
-                        clique = None
-
-
                         # Values clique_k are overloaded
                         # clique_k = 1 ..largest hyperedge, 2 .. largest_clique (Z3), k>3 k-cliques
                         if clique_k == 1:
@@ -105,7 +111,8 @@ class FractionalHypertreeDecomposer:
                         elif clique_k == 2:
                             clique = self._pp.hgp.hg.largest_clique(timeout=60)
                         else:
-                            clique_list = self._pp.hgp.hg.largest_clique_asp(prevent_k_hyperedge=clique_k, enum=False, timeout=60)[2]
+                            clique_list = \
+                            self._pp.hgp.hg.largest_clique_asp(prevent_k_hyperedge=clique_k, enum=False, timeout=60)[2]
                             if len(clique_list) > 0:
                                 clique = clique_list[0]
                             pre_clique_size = len(clique_list)
@@ -117,6 +124,49 @@ class FractionalHypertreeDecomposer:
                         logging.info(clique)
                         ret['pre_clique_size'].append(pre_clique_size)
                         ret['pre_clique_k'].append(clique_k)
+
+                        # cliques for symmetry breaking
+                        pre_clique_size = 1
+                        clique_list = []
+                        clique = None
+                        encoder = None
+
+                        if clique_k_sym == -1:
+                            clique = []
+                        if clique_k_sym == 1:
+                            encoder = Hypergraph.encoder_k_hyperclique
+                        elif clique_k_sym == 2:
+                            encoder = Hypergraph.encoder_largest_clique
+                        elif clique_k_sym == 3:
+                            encoder = Hypergraph.encoder_largest_clique_neighborhood
+                        elif clique_k_sym == 4:
+                            encoder = Hypergraph.encoder_largest_clique_wo_twins
+                        elif clique_k_sym == 5:
+                            encoder = Hypergraph.encoder_clique_maximize_used_hyperedges
+                        elif clique_k_sym == 6:
+                            encoder = Hypergraph.encoder_clique_maximize_completely_used_hyperedges
+
+                        # use clique_k for computing k-hypercliques
+                        if encoder is not None:
+                            clique_k = max(3, clique_k)
+                            clique_symm_wall = time.time()
+                            clique_list = self._pp.hgp.hg.solve_asp(encoder(self._pp.hgp.hg) if clique_k_sym > 1 else encoder(self._pp.hgp.hg, clique_k), \
+                                                                clingoctl=None, timeout=clique_timeout)[2]
+                            ret['clique_symm_time'] = time.time() - clique_symm_wall
+
+                        if len(clique_list) > 0:
+                            clique = clique_list[0]
+                        pre_clique_size = len(clique_list)
+
+                        # still update lower bounds
+                        # TODO: add parameter
+                        if clique_extended_lowerbounds and clique is not None and len(clique) > 0:
+                            self._pp.update_lb(clique, len(clique), clique_k == 3 and clique_k_sym == 1)
+
+                        logging.info("Computed Symmetry Clique follows.")
+                        logging.info(clique)
+                        ret['pre_clique_sym_size'].append(pre_clique_size)
+                        ret['pre_clique_k_sym'].append(clique_k_sym)
 
                     twin_vertices = None
                     if encode_twins:
@@ -136,14 +186,17 @@ class FractionalHypertreeDecomposer:
                         continue
 
                     z3_wall = time.time()
-                    decomposer = FractionalHypertreeDecomposition_z3(self._pp.hgp.hg, timeout=self.timeout,
-                                                                     checker_epsilon=self.__checker_epsilon,
-                                                                     ghtd=self.ghtd)
+                    decomposer = FractionalHypertreeDecomposition(self._pp.hgp.hg, timeout=self.timeout,
+                                                                  checker_epsilon=self.__checker_epsilon,
+                                                                  ghtd=self.ghtd, solver_bin=self.__solver_bin, #debug=True,
+                                                                  odebug=self.odebug)
                     res = decomposer.solve(lbound=self._pp.lb if only_fhtw else 1,
-                                           clique=clique, twins=twin_vertices, ubound=upper_bound)
-                    ret['subsolvers'][solver_run_id] = {'width': res['objective'],
+                                           clique=clique, topsort=topsort, twins=twin_vertices, ubound=upper_bound)
+                    ret['subsolvers'][solver_run_id] = {'width': res['objective'].numerator/res['objective'].denominator,
+                                                        'width_fractional': {'numerator': res['objective'].numerator,
+                                                                             'denominator': res['objective'].denominator},
                                                         'decomposition': res['decomposition'],
-                                                        'smt_solver_stats': res['smt_solver_stats'],
+                                                        # 'smt_solver_stats': res['smt_solver_stats'],
                                                         'z3_wall': time.time() - z3_wall,
                                                         'enc_wall': res['enc_wall']}
                     solver_run_id += 1
@@ -192,13 +245,11 @@ class FractionalHypertreeDecomposer:
                             i -= 1
                         tds.append(ftd)
 
-
             logging.info("FTW {0}".format(self._pp.lb))
             if preprocessing_only:
                 ret['objective'] = 'na'
                 ret['td'] = 'na'
                 return ret
-
 
             if connect_components:
                 # print "TDs", [i.chi for i in tds]
@@ -210,9 +261,10 @@ class FractionalHypertreeDecomposer:
                 assert (tds[0].validate(whole_hgp.hg, strict=False))
                 # assert that treewidth should be within numeric range! (due to cplex)
                 if not self._pp.lb - accuracy <= tds[0].max_bag_size() <= self._pp.lb + accuracy:
-                    raise ValueError("connected (combined) fhtw should be {0}, but actually is {1}".format(self._pp.lb, tds[0].max_bag_size()))
-                    #assert (self._pp.lb - accuracy <= tds[0].max_bag_size() <= self._pp.lb + accuracy)
-
+                    raise ValueError("connected (combined) fhtw should be {0}, but actually is {1}".format(self._pp.lb,
+                                                                                                           tds[
+                                                                                                               0].max_bag_size()))
+                    # assert (self._pp.lb - accuracy <= tds[0].max_bag_size() <= self._pp.lb + accuracy)
 
         ret['objective'] = self._pp.lb
         ret['td'] = tds[0] if len(tds) > 0 else None

@@ -84,7 +84,7 @@ class GraphSatTw(object):
     def add_clause(self, C):
         # C = map(neg, C)
         # self.backend.add_rule(head=[], body=C, choice=False)
-        self.stream.write("%s 0\n" %" ".join(map(str,C)))
+        self.stream.write("%s 0\n" %" ".join(list(map(str,C))))
         self.num_cls += 1
 
     def add_cards(self, C):
@@ -92,7 +92,7 @@ class GraphSatTw(object):
 
     def add_at_most(self, C, m):
         # self.backend.add_weight_rule(head=[], lower=m + 1, body=[(x, 1) for x in C], choice=False)
-        self.stream.write("%s <= %i 0\n" % (" ".join(map(lambda x: str(int(x)),C)),m))
+        self.stream.write("%s <= %i 0\n" % (" ".join(list(map(lambda x: str(int(x)),C)),m)))
 
     def add_bin_at_most_(self, C, curr, k, pos):
         # subset complete cls
@@ -240,9 +240,9 @@ class GraphSatTw(object):
 
         logging.info('Edges')
         for i, j in self.G.edges():
-            print i,j
+            print(i,j)
             if i < j:
-                print "i=", i, "j=", j
+                print("i=", i, "j=", j)
                 self.add_clause([-self.ord[i][j], self.arc[i][j]])
                 self.add_clause([self.ord[i][j], self.arc[j][i]])
 
@@ -295,10 +295,10 @@ class GraphSatTw(object):
 
         try:
             clique = next(nx.find_cliques(self.G))
-            print 'clique', clique
+            print('clique', clique)
             self.break_clique(clique)
         except StopIteration:
-            print 'no clique'
+            print('no clique')
             pass
 
         # for clique in nx.find_cliques(G):
@@ -321,7 +321,7 @@ class GraphSatTw(object):
     def solve(self, m):
         self.encode()
         self.add_all_at_most(m)
-        print 'm=%s, timeout=%s' % (m, self.timeout)
+        print('m=%s, timeout=%s' % (m, self.timeout))
         # f = self.ctl.solve_async()  # on_model, on_finish)
         # done = f.wait(self.timeout)
         # if not done:
@@ -364,9 +364,9 @@ class GraphSatTw(object):
             # G1 = self.G.copy()
             lbound_solver = GraphSatTw(G1, timeout=timeout)
 
-            print 'u = %s, v = %s' % (u, v)
+            print('u = %s, v = %s' % (u, v))
             ret = lbound_solver.solve(k)
-            print 'ret = %s' % ret
+            print('ret = %s' % ret)
             if not ret:
                 return False
 
@@ -380,7 +380,7 @@ class GraphSatTw(object):
             # print G1.edges()
             lbound_solver = GraphSatTw(G1)
             res = lbound_solver.solve(k)
-            print 'node=%s, bound=%s, res=%s' % (n, k, res)
+            print('node=%s, bound=%s, res=%s' % (n, k, res))
 
     def extract_assignment(self,assignment):
         pass
@@ -391,25 +391,25 @@ class GraphSatTw(object):
             # print model.contains(clingo.Function("volatile", [9])).lower()
 
             for x in model.symbols(atoms=True):
-                print 'yyy'
-            print 'model000=', str(model)
-            print 'model=', dir(model)
-            print 'cost=', model.cost
+                print('yyy')
+            print('model000=', str(model))
+            print('model=', dir(model))
+            print('cost=', model.cost)
             assignment[0] = True
             # assignment[0] = deepcopy(model)
             #TODO: does not show any results here
-            print 'symbols=', model.symbols(atoms=True,terms=True,shown=True,csp=True,extra=True)
+            print('symbols=', model.symbols(atoms=True,terms=True,shown=True,csp=True,extra=True))
         return on_model
 
 
     @property
     def treewidth(self):
         start = time.time()
-        print 'encode'
+        print('encode')
         self.encode()
         elapsed = time.time() - start
-        print 'encode finished'
-        print 'encoding time = %s' % elapsed
+        print('encode finished')
+        print('encoding time = %s' % elapsed)
         # timeout = self.timeout
         timeout = 0
 
@@ -417,13 +417,13 @@ class GraphSatTw(object):
         for m in xrange(self.ubound, 0, -1):
             timeout = np.ceil(timeout)
             start = time.time()
-            print '=' * 80
-            print 'm=%s, timeout=%s' % (m, timeout)
+            print('=' * 80)
+            print('m=%s, timeout=%s' % (m, timeout))
             self.add_all_at_most(m)
             # print 'signatures', self.ctl.symbolic_atoms.signatures
 
             future = self.ctl.solve_async(on_model=self.set_assignment(assignment))  # on_model, on_finish)
-            print 'assignment=', assignment
+            print('assignment=', assignment)
             done = future.wait(timeout)
             diff = time.time() - start
             if timeout != 0 and not done:
@@ -436,7 +436,7 @@ class GraphSatTw(object):
                 # self.minor_lbound(6, m)
                 res = self.minor_lbound_num(m, timeout)
                 if not res is None and res == False:
-                    print 'solution found=%i' % (m + 1)
+                    print('solution found=%i' % (m + 1))
                     return m + 1
 
                     # self.subgraph_lbound(m)
@@ -446,13 +446,13 @@ class GraphSatTw(object):
             if timeout < diff:
                 timeout = timeout / 0.97
 
-            print future.get().satisfiable
+            print(future.get().satisfiable)
             if not future.get().satisfiable:
-                print 'solution found=',
-                print m + 1
+                print('solution found=',)
+                print(m + 1)
                 return m + 1
             else:
-                print 'assignment=', assignment
+                print('assignment=', assignment)
                 pass
                 # assignment = self.extract_assignment()
 

@@ -1,24 +1,13 @@
-name: fhtd
+name: fhtd_base
 channels:
-  - yikelu
-  - ibmdecisionoptimization
-  - anaconda
-  - potassco
   - conda-forge
   - defaults
-  - daajoe
 dependencies:
+  #mandatory: graph library
+  - networkx>=2.2
+  #TODO(jf): do we need this one?
+  - numpy>=1.17.2
+  #TODO(jf): do we need this one?
   - lxml>=4.1.1
-  - deprecation>=2.0
-  - backports>=1.0
-  - backports.functools_lru_cache>=1.5
-  - backports.lzma>=0.0.8
-  - backports_abc>=0.5
-  - gitpython>=2.1.3
-  - matplotlib>=2.1.2
-  - networkx>=2.0
-  - numpy>=1.14.1
-  - cplex>=12.8
-  - pymonad>=1.3
-  - clingo
-  - z3_experimental
+  #mandatory: signal handling and kill pstrees
+  - psutil

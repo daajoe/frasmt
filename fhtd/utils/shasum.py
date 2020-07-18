@@ -1,5 +1,6 @@
 import hashlib
 
+
 def sha256_checksum(filename, block_size=65536):
     sha256 = hashlib.sha256()
     with open(filename, 'rb') as f:

@@ -1,0 +1,28 @@
+name: fhtd_full
+channels:
+  - conda-forge
+  - defaults
+  - potassco
+  # cplex
+  - ibmdecisionoptimization
+dependencies:
+  - python=3.7
+  #mandatory: graph library
+  - networkx>=2.2
+  #TODO(jf): do we need this one?
+  - numpy>=1.17.2
+  #TODO(jf): do we need this one?
+  - lxml>=4.1.1
+  #mandatory: signal handling and kill pstrees
+  - psutil
+  #optional: largest clique via asp
+  - clingo
+  # TODO: pymonad pip
+  #TODO: python3.7
+  - cplex
+  #VIZ:
+  - matplotlib
+  - pygraphviz
+  #bugfix missing libgvplugin_pango.so.6
+  - xorg-libxrender
+  - xorg-libxpm

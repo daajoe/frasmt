@@ -20,12 +20,14 @@ import logging
 import re
 import time
 # import htd_validate
-from cStringIO import StringIO
+from io import StringIO
 from decimal import Decimal
 from itertools import combinations
 
 import z3
+# noinspection PyUnresolvedReferences
 from htd_validate.decompositions import FractionalHypertreeDecomposition
+# noinspection PyUnresolvedReferences
 from z3 import Or, Not, Sum, Implies
 
 
@@ -34,7 +36,9 @@ from z3 import Or, Not, Sum, Implies
 
 
 class FractionalHypertreeDecomposition_z3(object):
-    def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False):
+    def __init__(self, hypergraph, wprecision=20, timeout=0, stream=StringIO(), checker_epsilon=None, ghtd=False,
+                 solver_bin=None, debug=False):
+        self.debug = debug
         if not checker_epsilon:
             checker_epsilon = Decimal(0.001)
         self.__checker_epsilon = checker_epsilon
@@ -64,10 +68,10 @@ class FractionalHypertreeDecomposition_z3(object):
         # self.ord = np.zeros((n + 1, n + 1), dtype=int)
         self.ord = [[None for j in range(n + 1)] for i in range(n + 1)]
         # ordering
-        for i in xrange(1, n + 1):
+        for i in range(1, n + 1):
             # TODO: so far more variables
-            for j in xrange(i + 1, n + 1):
-                # for j in xrange(i + 1, n + 1):
+            for j in range(i + 1, n + 1):
+                # for j in range(i + 1, n + 1):
                 # (declare-const ord_ij Bool)
                 self.ord[i][j] = self.add_var(name='ord_%s_%s' % (i, j), dtype=z3.Bool)
                 self.stream.write("(declare-const ord_{i}_{j} Bool)\n".format(i=i, j=j))
@@ -82,18 +86,18 @@ class FractionalHypertreeDecomposition_z3(object):
         # arcs
         self.arc = [[None for j in range(n + 1)] for i in range(n + 1)]
         # self.arc = np.zeros((n + 1, n + 1), dtype=int)
-        for i in xrange(1, n + 1):
-            for j in xrange(1, n + 1):
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
                 # declare arc_ij variables
                 self.arc[i][j] = self.add_var(name='arc_%s_%s' % (i, j), dtype=z3.Bool)
                 self.stream.write("(declare-const arc_{i}_{j} Bool)\n".format(i=i, j=j))
 
         # weights
-        self.weight = [[None for ej in xrange(m + 1)]
-                       for j in xrange(n + 1)]
+        self.weight = [[None for ej in range(m + 1)]
+                       for j in range(n + 1)]
 
-        for j in xrange(1, n + 1):
-            for ej in xrange(1, m + 1):
+        for j in range(1, n + 1):
+            for ej in range(1, m + 1):
                 # (declare-const weight_j_e Real)
                 if self.ghtd:
                     self.weight[j][ej] = self.add_var(name='weight[%s][e%s]' % (j, ej), dtype=z3.Int)
@@ -146,7 +150,7 @@ class FractionalHypertreeDecomposition_z3(object):
         n = self.hypergraph.number_of_nodes()
 
         logging.info("Counter for fractional covers value=%s" % m)
-        for j in xrange(1, n + 1):
+        for j in range(1, n + 1):
             C0 = []
             weights = []
             for e in self.hypergraph.edges():
@@ -165,94 +169,39 @@ class FractionalHypertreeDecomposition_z3(object):
 
     def elimination_ordering(self, n):
         ord = lambda p, q: self.literal(self.ord[p][q]) if p < q else Not(self.literal(self.ord[q][p]))
-        tord = lambda p, q: 'ord_{p}{q}'.format(p=p, q=q) if p < q \
-            else '(not ord_{q}{p})'.format(p=p, q=q)
+        tord = lambda p, q: 'ord_{p}{q}'.format(p=p, q=q) if p < q else '(not ord_{q}{p})'.format(p=p, q=q)
 
         logging.info('Ordering')
-        for i in xrange(1, n + 1):
-            for j in xrange(1, n + 1):
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
                 if i == j:
                     continue
-                for l in xrange(1, n + 1):
+                for l in range(1, n + 1):
                     if i == l or j == l:
                         continue
-                    # OLD VERSION
-                    C = []
-                    C.append(-self.ord[i][j] if i < j else self.ord[j][i])
-                    C.append(-self.ord[j][l] if j < l else self.ord[l][j])
-                    C.append(self.ord[i][l] if i < l else -self.ord[l][i])
+                    C = [-self.ord[i][j] if i < j else self.ord[j][i], -self.ord[j][l] if j < l else self.ord[l][j],
+                         self.ord[i][l] if i < l else -self.ord[l][i]]
                     self.add_clause(C)
-                    # IMPLIES VERSION
-                    # (assert (=> (and ord_ij ord_jl) ord_il)
-
-                    # logging.debug(
-                    #     "i=%s j=%s l=%s ord[i][j]=%s, ord[j][l]=%s" % (i, j, l, self.ord[i][j], self.ord[j][l]))
-                    # f = Implies(And(ord(i, j), ord(j, l)), ord(i, l))
-                    # Or([self.literal(x) for x in C])
-                    # self.__solver.add_assertion(f)
-                    # (assert (=> (and ord_ij ord_jl) ord_il)
-                    # self.stream.write(
-                    #    "(assert (=> (and ord_{i}{j} ord_{j}{l}) ord_{i}{l}))\n".format(i=i, j=j, l=l))
-                    # self.stream.write(
-                    #     "(assert (=> (and %s %s) %s))\n" % (tord(i, j), tord(j, l), tord(i, l)))
 
         logging.info('Edges')
-        # OLD VERSION
-        # for e in self.hypergraph.edges():
-        #     # PRIMAL GRAPH CONSTRUCTION
-        #     for i, j in combinations(self.hypergraph.get_edge(e), 2):
-        #         if i < j:
-        #             self.add_clause([-self.ord[i][j], self.arc[i][j]])
-        #             self.add_clause([self.ord[i][j], self.arc[j][i]])
         for e in self.hypergraph.edges():
             # PRIMAL GRAPH CONSTRUCTION
             for i, j in combinations(self.hypergraph.get_edge(e), 2):
                 if i > j:
                     i, j = j, i
                 if i < j:
-                    # AS IMPLICATION
-                    # f = Implies(self.literal(self.ord[i][j]), self.literal(self.arc[i][j]))
-                    # self.__solver.add_assertion(f)
-                    # f = Implies(Not(self.literal(self.ord[i][j])), self.literal(self.arc[j][i]))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write("(assert (=> ord_{i}{j} arc_{i}{j}))\n".format(i=i, j=j))
-                    # self.stream.write("(assert (=> (not ord_{i}{j}) arc_{j}{i}))\n".format(i=i, j=j))
-
                     # AS CLAUSE
                     self.add_clause([self.ord[i][j], self.arc[j][i]])
                     self.add_clause([-self.ord[i][j], self.arc[i][j]])
 
         logging.info('Edges Elimintation')
-        for i in xrange(1, n + 1):
-            for j in xrange(1, n + 1):
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
                 if i == j:
                     continue
-                for l in xrange(j + 1, n + 1):
+                for l in range(j + 1, n + 1):
                     if i == l:
                         continue
-                    # # AS IMPLICATION
-                    # f = Implies(And(self.literal(self.arc[i][j]),
-                    #                 And(self.literal(self.arc[i][l]), self.literal(self.ord[j][l]))),
-                    #             self.literal(self.arc[j][l]))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write(
-                    #     "(assert (=> (and arc_{i}{j} arc_{i}{l} ord_{j}{l}) arc_{j}{l}))\n".format(i=i, j=j, l=l))
-                    #
-                    # f = Implies(And(self.literal(self.arc[i][j]),
-                    #                 And(self.literal(self.arc[i][l]), Not(self.literal(self.ord[j][l])))),
-                    #             self.literal(self.arc[l][j]))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write(
-                    #     "(assert (=> (and arc_{i}{j} arc_{i}{l} (not ord_{j}{l})) arc_{l}{j}))\n".format(i=i, j=j, l=l))
-                    #
-                    # # redundant
-                    # f = Or(Not(self.literal(self.arc[i][j])), Or(Not(self.literal(self.arc[i][l])),
-                    #                                              Or(self.literal(self.arc[j][l]),
-                    #                                                 self.literal(self.arc[l][j]))))
-                    # self.__solver.add_assertion(f)
-                    # self.stream.write(
-                    #     "(assert (or (not arc_{i}{j}) (not arc_{i}{l}) arc_{j}{l} arc_{l}{j}))\n".format(i=i, j=j, l=l))
-
                     # AS CLAUSE
                     self.add_clause([-self.arc[i][j], -self.arc[i][l], -self.ord[j][l], self.arc[j][l]])
                     self.add_clause([-self.arc[i][j], -self.arc[i][l], self.ord[j][l], self.arc[l][j]])
@@ -261,8 +210,7 @@ class FractionalHypertreeDecomposition_z3(object):
 
         logging.info('Forbid Self Loops')
         # forbid self loops
-        for i in xrange(1, n + 1):
-            # self.__solver.add_assertion(Not(self.literal(self.arc[i][i])))
+        for i in range(1, n + 1):
             # self.stream.write("(assert (not arc_{i}_{i}))\n".format(i=i))
             self.add_clause([-self.arc[i][i]])
 
@@ -272,8 +220,8 @@ class FractionalHypertreeDecomposition_z3(object):
         # TODO: double-check the iterator over i
         logging.info('Vertex in bag -> covered')
         logging.debug("Edges %s" % self.hypergraph.edges())
-        for i in xrange(1, n + 1):
-            for j in xrange(1, n + 1):
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
                 if i == j:
                     continue
 
@@ -376,17 +324,33 @@ class FractionalHypertreeDecomposition_z3(object):
         # z3.set_option(verbose=1)
         pass
 
+    # def _get_ordering(self, model):
+    #     def cmp(i, j):
+    #         if i < j:
+    #             return -1 if model[self.literal(self.ord[i][j])] else 1
+    #         else:
+    #             return 1 if model[self.literal(self.ord[j][i])] else -1
+    #
+    #     logging.info("Reconstruct Ordering")
+    #
+    #     ordering = range(1, self.hypergraph.number_of_nodes() + 1)
+    #     raise NotImplementedError
+    #     return sorted(ordering, cmp=cmp)
+
     def _get_ordering(self, model):
-        def cmp(i, j):
-            if i < j:
-                return -1 if model[self.literal(self.ord[i][j])] else 1
-            else:
-                return 1 if model[self.literal(self.ord[j][i])] else -1
-
         logging.info("Reconstruct Ordering")
+        ordering = []
+        for i in range(1, self.hypergraph.number_of_nodes() + 1):
+            pos = 0
+            for j in ordering:
+                # We know j is smaller due to range processing
+                if not model[self.literal(self.ord[j][i])]:
+                    break
+                # Move current element one position forward
+                pos += 1
+            ordering.insert(pos, i)
 
-        ordering = range(1, self.hypergraph.number_of_nodes() + 1)
-        return sorted(ordering, cmp=cmp)
+        return ordering
 
     def solve(self, m=None, lbound=1, ubound=None, clique=None, twins=None):
         opt = False
@@ -445,6 +409,10 @@ class FractionalHypertreeDecomposition_z3(object):
             logging.info("SMT solver returned: %s" % sat)
             # self.__solver.add(z3.OptimizeObjective(z3.OptimizeObj,m,ubound))
             # TODO: fix for lower bound
+            self.stream.write('foobar')
+            if self._debug:
+                with open('tmp_out.txt', 'w') as f:
+                    f.write(self.stream.getvalue())
 
             res = self.__solver.lower(h)
             logging.warning("SMT solver objective: %s" % res)
@@ -502,7 +470,7 @@ class FractionalHypertreeDecomposition_z3(object):
         ret = {}
         n = self.hypergraph.number_of_nodes()
         logging.debug(" Model = %s" % model)
-        for i in xrange(1, n + 1):
+        for i in range(1, n + 1):
             # print 'bag %i'
             ret[i] = {}
             for e in self.hypergraph.edges():

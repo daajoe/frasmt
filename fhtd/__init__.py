@@ -1,3 +1,3 @@
-import smt
-import preprocessing
-from decomposer import FractionalHypertreeDecomposer
+import fhtd.smt
+import fhtd.preprocessing
+from fhtd.decomposer import FractionalHypertreeDecomposer

@@ -45,9 +45,9 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         #return
         hg = self.loadFile(self.filePath("testHG/") + "C13_7.edge")
         self.assertIsNotNone(hg)
-        pp = d.FractionalHypertreeDecomposer(hg)
+        pp = d.FractionalHypertreeDecomposer(hg, solver_bin='lib/optimathsat/optimathsat-1.6.3')
         #pp = p.FractionalHyperTreeDecomposition_Preprocessor(hgpv.HypergraphPrimalView(hg))
-        self.assertEquals([set(xrange(1, 14))],
+        self.assertEquals([set(range(1, 14))],
                           [x for x in pp._pp.hgp.biconnected_components()])
 
         pp.solve()
@@ -62,7 +62,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
 
         hg = self.loadFile(self.filePath("./hyperbench/cq/imdb-q13a.hg"), fischl_format=True)
         self.assertIsNotNone(hg)
-        pp = d.FractionalHypertreeDecomposer(hg)
+        pp = d.FractionalHypertreeDecomposer(hg, solver_bin='lib/optimathsat/optimathsat-1.6.3')
         #pp = p.FractionalHyperTreeDecomposition_Preprocessor(hgpv.HypergraphPrimalView(hg))
         pp.solve()
 
@@ -75,7 +75,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         if doRealLifeTests:
             self.mapBenchmarks("./hyperbench/",
                                lambda args: d.FractionalHypertreeDecomposer(
-                                   self.loadFile(args["path"], fischl_format=True)).solve(only_fhtw=True))
+                                   self.loadFile(args["path"], fischl_format=True, solver_bin='lib/optimathsat/optimathsat-1.6.3')).solve(only_fhtw=True))
 
     def testRemoveHyperDegree(self):
         hg = self.loadFile(self.filePath("testHG/") + "C13_7.edge")
@@ -98,7 +98,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         hg.add_hyperedge((53, 2, 9))
         hg.add_hyperedge((83, 12, 9))
         # print ([x for x in pp.hgp.biconnected_components()])
-        rn13 = set(xrange(1, 14))
+        rn13 = set(range(1, 14))
         rn13.update([83, 53, 22, 29])
         self.assertEquals([set([43, 13]), set([9, 33]), rn13],
                           # set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 83, 53, 22, 29])],
@@ -129,7 +129,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         hg.add_hyperedge((53, 2, 9))
         hg.add_hyperedge((83, 12, 9))
         # print ([x for x in pp.hgp.biconnected_components()])
-        rn13 = set(xrange(1, 14))
+        rn13 = set(range(1, 14))
         rn13.update([83, 53, 22, 29])
         self.assertEquals([set([43, 13]), set([9, 33]), rn13],
                           # set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 83, 53, 22, 29])],
@@ -143,9 +143,9 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         hg = self.loadFile(self.filePath("testHG/") + "C13_7.edge")
         self.assertIsNotNone(hg)
         self.assertEquals(13, hg.number_of_nodes())
-        pp = d.FractionalHypertreeDecomposer(hg)
+        pp = d.FractionalHypertreeDecomposer(hg, solver_bin='lib/optimathsat/optimathsat-1.6.3')
         pp.twin_vertices()
-        self.assertEquals([range(1, 14)],
+        self.assertEquals([list(range(1, 14))],
                           # [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13]],
                           sorted(x for x in pp._pp.hgp.iter_twin_vertices()))
 
@@ -165,12 +165,12 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         self.assertTrue(pp.almost_simplicial_hypergraph(edge_contr=True))
         self.assertEquals(4, len(pp.hgp))
         self.assertEquals(1, len(pp.hgp.hg.edges()))
-        self.assertEquals(list(pp.hgp.hg.edges().values()[0]), list(pp.hgp.hg.nodes_iter()))
+        self.assertEquals(list(tuple(pp.hgp.hg.edges().values())[0]), list(pp.hgp.hg.nodes_iter()))
 
         self.assertFalse(pp.almost_simplicial_hypergraph(edge_contr=True))
         self.assertEquals(4, len(pp.hgp))
         self.assertEquals(1, len(pp.hgp.hg.edges()))
-        self.assertEquals(list(pp.hgp.hg.edges().values()[0]), list(pp.hgp.hg.nodes_iter()))
+        self.assertEquals(list(tuple(pp.hgp.hg.edges().values())[0]), list(pp.hgp.hg.nodes_iter()))
         print(pp.hgp.hg.edges())
 
     def testAlmostSimplicialPrimal(self):
@@ -234,7 +234,7 @@ class TestFHTDPreprocessor(vtd.ValidateGraphTestCase):
         self.assertTrue(pp.simplicial_primalgraph(clique_prevent_he_up_to=5))
         self.assertEquals(2, len(pp.hgp))
         self.assertEquals(1, len(pp.hgp.hg.edges()))
-        self.assertEquals(list(pp.hgp.hg.edges().values()[0]), list(pp.hgp.hg.nodes_iter()))
+        self.assertEquals(list(tuple(pp.hgp.hg.edges().values())[0]), list(pp.hgp.hg.nodes()))
 
         hg = self.loadFile(self.filePath("testHG/") + "C4+.edge")
         self.assertIsNotNone(hg)
