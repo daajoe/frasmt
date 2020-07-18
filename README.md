@@ -2,7 +2,7 @@
 
 ## Download:
 ```bash
-git clone --recurse-submodules  git@github.com:daajoe/fractionalhypertreewidth.git
+git clone --recurse-submodules  git@github.com:daajoe/frasmt.git
 ````
 
 ## Hypergraphs
