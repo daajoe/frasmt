@@ -11,6 +11,7 @@ git clone --recurse-submodules  git@github.com:daajoe/frasmt.git
 See: https://github.com/daajoe/hypergraphs or http://hyperbench.dbai.tuwien.ac.at/
 
 
+
 ## External Requirements (conda)
 ### Get Anaconda
 https://www.anaconda.com/download/#macos
@@ -34,6 +35,9 @@ source activate fhtd
 ### SMT solver (non-linux)
 Unfortunately, anaconda packages for z3 are quite outdated (we need the optimization API from z3). 
 I put together an experimental anaconda package (https://anaconda.org/daajoe/z3_experimental), but do not maintain this one at the moment. Should work, but only for linux. Otherwise see below.
+
+#### optimathsat
+http://optimathsat.disi.unitn.it/pages/download-js.html
 
 #### Z3
 https://github.com/Z3Prover/z3
